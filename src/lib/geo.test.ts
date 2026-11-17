@@ -38,7 +38,8 @@ describe('slim-geojson', () => {
       type: 'FeatureCollection',
       features: [
         { type: 'Feature', id: 'n1', geometry: { type: 'Point', coordinates: [2.1, 41.3] }, properties: { amenity: 'post_box' } },
-        { type: 'Feature', id: 'n2', geometry: { type: 'Point', coordinates: [2.2, 41.4] }, properties: { operator: 'Correos', ref: '08-123' } },
+        { type: 'Feature', id: 'n2', geometry: { type: 'Point', coordinates: [2.2, 41.4] }, properties: { amenity: 'post_box', operator: 'Correos', ref: '08-123' } },
+        { type: 'Feature', id: 'n9', geometry: { type: 'Point', coordinates: [2.3, 41.5] }, properties: { shop: 'tobacco' } },
       ],
     }
     const fc = merge([toFeatures(overpass), toFeatures(osmium)])

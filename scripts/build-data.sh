@@ -68,17 +68,13 @@ for entry in "${EXTRACTS[@]}"; do
     curl -fL "${RETRY[@]}" -o "$pbf" "$url"
   fi
 
-  echo "⚙ filtrant bústies ($name)"
-  osmium tags-filter "$pbf" n/amenity=post_box -o "$WORK/$name-pb.osm.pbf" --overwrite
-  osmium export "$WORK/$name-pb.osm.pbf" -f geojson --add-unique-id=type_id \
-    -o "$WORK/$name-pb.geojson" --overwrite
-  INPUTS+=("$WORK/$name-pb.geojson")
-
-  echo "⚙ filtrant llocs on comprar segells ($name)"
-  osmium tags-filter "$pbf" "${STAMP_FILTERS[@]}" -o "$WORK/$name-st.osm.pbf" --overwrite
-  osmium export "$WORK/$name-st.osm.pbf" -f geojson --add-unique-id=type_id \
-    -o "$WORK/$name-st.geojson" --overwrite
-  STAMP_INPUTS+=("$WORK/$name-st.geojson")
+  # Una sola passada pel mapa per a bústies i llocs de segells (abans eren dues)
+  echo "⚙ filtrant bústies i llocs de segells ($name)"
+  osmium tags-filter "$pbf" n/amenity=post_box "${STAMP_FILTERS[@]}" -o "$WORK/$name-f.osm.pbf" --overwrite
+  osmium export "$WORK/$name-f.osm.pbf" -f geojson --add-unique-id=type_id \
+    -o "$WORK/$name-f.geojson" --overwrite
+  INPUTS+=("$WORK/$name-f.geojson")
+  STAMP_INPUTS+=("$WORK/$name-f.geojson")
   if [ "${CLEAN:-0}" = "1" ]; then rm -f "$pbf"; fi   # el mapa sencer ja no cal
 done
 

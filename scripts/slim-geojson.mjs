@@ -19,10 +19,14 @@ export function slimFeature(id, lng, lat, tags = {}) {
   }
 }
 
+// En l'exportació combinada hi ha bústies i botigues: aquí només volem bústies
+// (les que ja vénen netes de les nostres tessel·les no porten «amenity», però sí «id»)
+const notPostbox = (tags = {}) => (tags.amenity ? tags.amenity !== 'post_box' : !tags.id)
+
 export function toFeatures(input) {
   if (input.type === 'FeatureCollection') {
     return input.features
-      .filter((f) => f.geometry?.type === 'Point')
+      .filter((f) => f.geometry?.type === 'Point' && !notPostbox(f.properties))
       .map((f) => {
         const [lng, lat] = f.geometry.coordinates
         return slimFeature(f.id ?? f.properties?.id ?? f.properties?.['@id'], lng, lat, f.properties)
@@ -31,14 +35,31 @@ export function toFeatures(input) {
   if (Array.isArray(input.elements)) {
     // Resposta d'Overpass
     return input.elements
-      .filter((e) => e.type === 'node')
+      .filter((e) => e.type === 'node' && e.tags?.amenity === 'post_box')
       .map((e) => slimFeature(`n${e.id}`, e.lon, e.lat, e.tags))
   }
   throw new Error('Format no reconegut')
 }
 
+/**
+ * Missatgeries i centres que l'OSM etiqueta com a «oficina de correus» però on
+ * no es venen segells (paqueteria, centres de classificació…).
+ */
+const NO_STAMPS = new RegExp(
+  [
+    'dhl', '\\bups\\b', 'fedex', '\\bgls\\b', 'general logistics', '\\bmrw\\b', 'seur', 'tipsa', 'nacex',
+    'chronopost', '\\btnt\\b', '\\bdpd\\b', 'inpost', 'mondial relay', 'relais colis', 'packeta', '\\bbrt\\b',
+    '\\bsda\\b', 'nexive', 'sailpost', 'correos express', 'ctt express', 'mail ?boxes', '\\bmbe\\b', 'amazon',
+    'zeleris', 'envialia', 'colis', 'centre de tri', 'centro de tratamiento', 'centro di smistamento',
+  ].join('|'),
+  'i',
+)
+export const sellsNoStamps = (tags = {}) =>
+  NO_STAMPS.test([tags.name, tags.operator, tags.brand].filter(Boolean).join(' | '))
+
 /** Tipus de lloc on es poden comprar segells, a partir de les etiquetes d'OSM. */
 export function stampKind(tags = {}) {
+  if (sellsNoStamps(tags)) return null
   if (tags.vending === 'stamps' || /(^|;)stamps(;|$)/.test(tags.vending ?? '')) return 'vending'
   if (tags.amenity === 'post_office') return 'post_office'
   if (tags.amenity === 'post_partner') return 'post_partner'
