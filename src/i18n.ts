@@ -4,7 +4,7 @@ import { ref } from 'vue'
  * Idiomes de POSTAL. S'agafa el del navegador o del mòbil (a l'app, Capacitor
  * passa l'idioma del sistema al navegador intern). Per provar-ne un altre: ?lang=pt
  */
-export const LANGS = ['ca', 'es', 'pt', 'fr', 'en'] as const
+export const LANGS = ['ca', 'es', 'pt', 'fr', 'it', 'en'] as const
 export type Lang = (typeof LANGS)[number]
 
 const ca = {
@@ -301,6 +301,79 @@ const fr: Messages = {
   dirUturn: 'demi-tour',
 }
 
+const it: Messages = {
+  sectionBoxes: 'Cassette',
+  sectionStamps: 'Francobolli',
+  findStamps: 'Dove compro i francobolli?',
+  countStamps: '{n} punti vendita di francobolli',
+  kindTobacco: 'Tabaccheria',
+  kindPostOffice: 'Ufficio postale',
+  kindPostPartner: 'Punto Poste',
+  kindVending: 'Distributore di francobolli',
+  openUntil: 'Aperto fino alle {time}',
+  closedOpensToday: 'Chiuso · apre alle {time}',
+  closedOpensTomorrow: 'Chiuso · apre domani alle {time}',
+  closedOpensDay: 'Chiuso · apre {day} alle {time}',
+  closedNow: 'Chiuso',
+  hoursUnknown: 'Orari sconosciuti',
+  collectToday: 'Ritiro oggi alle {time}',
+  collectTomorrow: 'Prossimo ritiro: domani alle {time}',
+  collectDay: 'Prossimo ritiro: {day} alle {time}',
+  buyOnline: 'Francobolli online su {post} ↗',
+  arrivedShop: 'Ci sei!',
+  arrivedShopSub: 'Ora puoi comprare i francobolli.',
+  title: 'POSTAL — trova la cassetta postale più vicina',
+  description: 'POSTAL: la mappa delle cassette postali. Trova la più vicina e gli orari di ritiro.',
+  loading: 'Caricamento delle cassette…',
+  count: '{n} cassette postali',
+  noData: 'Ancora nessun dato · {country}',
+  noneInData: 'Nessuna cassetta vicina',
+  noPermission: 'Nessun permesso di localizzazione',
+  gpsLost: 'GPS perso…',
+  routeError: 'Impossibile calcolare il percorso',
+  changeCountry: 'Cambia paese (ora: {country})',
+  findNearest: 'Trova la cassetta più vicina',
+  searching: 'Ricerca…',
+  nearest: 'La più vicina',
+  postbox: 'Cassetta postale',
+  unknownTimes: 'Orari di ritiro sconosciuti',
+  close: 'Chiudi',
+  howToGo: 'Come ci vai',
+  onFoot: 'A piedi',
+  byBike: 'In bici',
+  toWhom: 'A chi la mandi?',
+  optional: '(facoltativo)',
+  takeMe: 'Portami lì',
+  routing: 'Calcolo del percorso…',
+  openGoogle: 'Apri in Google Maps ↗',
+  minOnFoot: '{n} min a piedi',
+  minByBike: '{n} min in bici',
+  toPostbox: 'fino alla cassetta',
+  stop: 'Ferma',
+  sent: 'Lettera spedita!',
+  sentTo: 'È in viaggio verso {name}.',
+  inBox: 'È nella cassetta.',
+  done: 'Fatto',
+  envFor: 'Per',
+  envVia: 'via',
+  envSomeone: 'qualcuno di speciale',
+  navDepart: 'Parti',
+  navArrive: 'La cassetta è davanti a te',
+  navRoundabout: 'Alla rotonda, prendi l’uscita',
+  navContinue: 'Continua {dir}',
+  navStraight: 'Vai dritto',
+  navTurn: 'Gira {dir}',
+  navOn: '{text} in {street}',
+  dirLeft: 'a sinistra',
+  dirRight: 'a destra',
+  dirSlightLeft: 'leggermente a sinistra',
+  dirSlightRight: 'leggermente a destra',
+  dirSharpLeft: 'decisamente a sinistra',
+  dirSharpRight: 'decisamente a destra',
+  dirStraight: 'dritto',
+  dirUturn: 'un’inversione a U',
+}
+
 const en: Messages = {
   sectionBoxes: 'Postboxes',
   sectionStamps: 'Stamps',
@@ -374,15 +447,16 @@ const en: Messages = {
   dirUturn: 'a U-turn',
 }
 
-const MESSAGES: Record<Lang, Messages> = { ca, es, pt, fr, en }
+const MESSAGES: Record<Lang, Messages> = { ca, es, pt, fr, it, en }
 
 /** Noms dels països en cada idioma. */
 export const COUNTRY_NAMES: Record<Lang, Record<string, string>> = {
-  ca: { es: 'Espanya', pt: 'Portugal', fr: 'França' },
-  es: { es: 'España', pt: 'Portugal', fr: 'Francia' },
-  pt: { es: 'Espanha', pt: 'Portugal', fr: 'França' },
-  fr: { es: 'Espagne', pt: 'Portugal', fr: 'France' },
-  en: { es: 'Spain', pt: 'Portugal', fr: 'France' },
+  ca: { es: 'Espanya', pt: 'Portugal', fr: 'França', it: 'Itàlia' },
+  es: { es: 'España', pt: 'Portugal', fr: 'Francia', it: 'Italia' },
+  pt: { es: 'Espanha', pt: 'Portugal', fr: 'França', it: 'Itália' },
+  fr: { es: 'Espagne', pt: 'Portugal', fr: 'France', it: 'Italie' },
+  it: { es: 'Spagna', pt: 'Portogallo', fr: 'Francia', it: 'Italia' },
+  en: { es: 'Spain', pt: 'Portugal', fr: 'France', it: 'Italy' },
 }
 
 /** Idioma preferit: ?lang=xx, després els idiomes del navegador/mòbil, i si no, anglès. */

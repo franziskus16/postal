@@ -271,7 +271,11 @@ function addAppLayers() {
     type: 'symbol',
     source: 'busties',
     filter: ['==', ['get', 'id'], selected.value?.properties.id ?? ''],
-    layout: { 'icon-image': 'postal-stamp-selected', 'icon-size': 1.3, 'icon-allow-overlap': true },
+    layout: {
+      'icon-image': ['concat', 'postal-stamp-selected-', ['coalesce', ['get', 'country'], country.value]],
+      'icon-size': 1.3,
+      'icon-allow-overlap': true,
+    },
   })
 
   // ── Llocs on comprar segells ──
@@ -310,7 +314,7 @@ function addAppLayers() {
     filter: ['!', ['has', 'point_count']],
     layout: {
       visibility: stampsVisible,
-      'icon-image': ['concat', 'postal-shop-', ['get', 'kind']],
+      'icon-image': ['concat', 'postal-shop-', ['get', 'kind'], '-', ['coalesce', ['get', 'country'], country.value]],
       'icon-size': ['interpolate', ['linear'], ['zoom'], 12, 0.7, 17, 1],
       'icon-allow-overlap': true,
     },
@@ -322,7 +326,7 @@ function addAppLayers() {
     filter: ['==', ['get', 'id'], selected.value?.properties.id ?? ''],
     layout: {
       visibility: stampsVisible,
-      'icon-image': ['concat', 'postal-shop-', ['get', 'kind']],
+      'icon-image': ['concat', 'postal-shop-', ['get', 'kind'], '-', ['coalesce', ['get', 'country'], country.value]],
       'icon-size': 1.45,
       'icon-allow-overlap': true,
     },

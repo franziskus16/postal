@@ -11,6 +11,7 @@ describe('idioma', () => {
     [['pt-PT'], 'pt'],
     [['pt-BR'], 'pt'],
     [['fr-FR'], 'fr'],
+    [['it-IT'], 'it'],
     [['de-DE', 'fr'], 'fr'],
     [['gl-ES'], 'es'],
     [['ja-JP'], 'en'],
@@ -24,10 +25,10 @@ describe('idioma', () => {
   })
 
   it('tots els idiomes tradueixen els textos i les instruccions', () => {
-    for (const l of ['ca', 'es', 'pt', 'fr', 'en'] as const) {
+    for (const l of ['ca', 'es', 'pt', 'fr', 'it', 'en'] as const) {
       lang.value = l
       expect(t('count', { n: 5 })).toContain('5')
-      expect(countryName('pt')).toBe('Portugal')
+      expect(countryName('it')).toMatch(/^It/)
       const text = describeManeuver({ type: 'turn', modifier: 'left' }, 'Rua Augusta')
       expect(text).toContain('Rua Augusta')
       expect(text).not.toContain('{')

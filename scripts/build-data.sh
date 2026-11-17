@@ -2,7 +2,7 @@
 # Genera les bústies d'un país a partir d'OSM, partides en tessel·les:
 #   public/data/<país>/index.json + public/data/<país>/<x>_<y>.json
 # i els llocs on comprar segells a public/data/<país>/stamps/
-# Ús:  bash scripts/build-data.sh es   |   pt   |   fr
+# Ús:  bash scripts/build-data.sh es   |   pt   |   fr   |   it
 #      (CLEAN=1 esborra els mapes descarregats en acabar; útil a GitHub Actions)
 # Requereix osmium-tool:  brew install osmium-tool   |   sudo apt install osmium-tool
 set -euo pipefail
@@ -20,10 +20,12 @@ mkdir -p "$WORK" public/data
 #  - Espanya: estancs i oficines de Correos
 #  - Portugal: botigues CTT, punts col·laboradors (postos de correio) i màquines
 #  - França: bureaux de tabac, oficines de La Poste, punts col·laboradors i màquines
+#  - Itàlia: tabacchi, oficines de Poste Italiane, punts col·laboradors i màquines
 case "$COUNTRY" in
   es) STAMP_FILTERS=(nwr/shop=tobacco nwr/amenity=post_office nwr/vending=stamps) ;;
   pt) STAMP_FILTERS=(nwr/amenity=post_office nwr/amenity=post_partner nwr/vending=stamps) ;;
   fr) STAMP_FILTERS=(nwr/shop=tobacco nwr/amenity=post_office nwr/amenity=post_partner nwr/vending=stamps) ;;
+  it) STAMP_FILTERS=(nwr/shop=tobacco nwr/amenity=post_office nwr/amenity=post_partner nwr/vending=stamps) ;;
 esac
 
 case "$COUNTRY" in
@@ -42,8 +44,13 @@ case "$COUNTRY" in
     EXTRACTS=(
       "france|https://download.geofabrik.de/europe/france-latest.osm.pbf"
     ) ;;
+  it)
+    # Itàlia sencera (Sicília i Sardenya incloses)
+    EXTRACTS=(
+      "italy|https://download.geofabrik.de/europe/italy-latest.osm.pbf"
+    ) ;;
   *)
-    echo "País desconegut: $COUNTRY (de moment: es, pt, fr)"; exit 1 ;;
+    echo "País desconegut: $COUNTRY (de moment: es, pt, fr, it)"; exit 1 ;;
 esac
 
 INPUTS=()

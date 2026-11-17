@@ -4,6 +4,7 @@
  *  - Espanya: groc Correos + vermell (els colors de la bandera)
  *  - Portugal: vermell CTT + verd (també els de la bandera)
  *  - França: groc La Poste + blau La Poste, amb el vermell de la bandera
+ *  - Itàlia: vermell de les «cassette» + verd de la bandera, sobre paper més càlid
  * La tinta blava de les línies és comuna a tots dos.
  */
 export interface Theme {
@@ -67,6 +68,18 @@ export const THEMES = {
     onAccent: '#F6F3EC',
     stripe: '#E8343A',
     water: '#BFCBEA',
+  },
+  it: {
+    ...shared,
+    paper: '#F8F2E8',
+    primary: '#D9322B', // vermell de les bústies italianes, més fosc que el de CTT
+    onPrimary: '#F8F2E8',
+    primaryTint: '#F3CFC2',
+    primaryTint2: '#EAB6A6',
+    accent: '#009246', // verd de la bandera
+    onAccent: '#F8F2E8',
+    stripe: '#D9322B',
+    building: '#ECE2DD',
   },
 } satisfies Record<string, Theme>
 

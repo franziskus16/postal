@@ -13,7 +13,8 @@
     "data:spain": "bash scripts/build-data.sh es",
     "data:portugal": "bash scripts/build-data.sh pt",
     "data:all": "bash scripts/build-all.sh",
-    "data:france": "bash scripts/build-data.sh fr"
+    "data:france": "bash scripts/build-data.sh fr",
+    "data:italy": "bash scripts/build-data.sh it"
   },
   "dependencies": {
     "@capacitor/core": "^7.0.0",

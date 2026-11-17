@@ -35,6 +35,14 @@ export const COUNTRIES: Record<ThemeCode, Country> = {
     zoom: 5,
     post: { name: 'La Poste', url: 'https://www.laposte.fr' },
   },
+  it: {
+    code: 'it',
+    name: 'Itàlia',
+    postmark: 'ITALIA',
+    center: [12.5, 42.5],
+    zoom: 5,
+    post: { name: 'Poste Italiane', url: 'https://www.poste.it' },
+  },
 }
 
 // Contorns aproximats (prou per saber en quin país ets; a pocs km de la
@@ -58,6 +66,16 @@ const FRANCE_MAINLAND: [number, number][] = [
   [-1.79, 43.37], [-2.2, 43.6], [-2.0, 46.0], [-5.5, 48.3], [-4.8, 48.95], [-1.9, 49.8],
   [1.4, 50.4], [2.55, 51.09],
 ]
+// Itàlia peninsular: frontera alpina aproximada (deixa fora Suïssa i Àustria) + mar
+const ITALY_MAINLAND: [number, number][] = [
+  [7.53, 43.78], [7.0, 44.25], [6.62, 45.1], [7.0, 45.9], [7.86, 45.92], [8.4, 46.45],
+  [8.98, 45.83], [9.3, 46.5], [10.1, 46.6], [10.45, 46.55], [10.5, 46.85], [11.0, 46.77],
+  [12.2, 47.08], [12.4, 46.7], [13.7, 46.52], [13.5, 46.2], [13.65, 45.95], [13.9, 45.6],
+  [13.6, 45.45], [12.6, 44.8], [13.6, 43.6], [14.4, 42.4], [16.2, 41.9], [18.6, 40.1],
+  [17.0, 39.0], [16.5, 38.2], [15.6, 37.9], [15.6, 38.6], [15.0, 40.0], [14.0, 40.6],
+  [12.9, 41.4], [11.0, 42.3], [10.0, 42.6], [10.0, 43.9], [9.7, 44.05], [8.6, 44.2],
+  [7.6, 43.7], [7.53, 43.78],
+]
 const BOXES: Record<string, [number, number, number, number][]> = {
   // [oest, sud, est, nord]
   ptIslands: [
@@ -70,6 +88,10 @@ const BOXES: Record<string, [number, number, number, number][]> = {
   ],
   frIslands: [
     [8.5, 41.3, 9.6, 43.05], // Còrsega
+  ],
+  itIslands: [
+    [12.3, 36.5, 15.7, 38.35], // Sicília
+    [8.1, 38.8, 9.9, 41.3], // Sardenya
   ],
 }
 
@@ -101,5 +123,6 @@ export function detectCountry(p: LngLat): ThemeCode | undefined {
   if (inPolygon(p, PORTUGAL_MAINLAND) || BOXES.ptIslands.some((b) => inBox(p, b))) return 'pt'
   if (BOXES.es.some((b) => inBox(p, b)) && !(p.lng > -1.8 && p.lat > pyreneesLat(p.lng))) return 'es'
   if (inPolygon(p, FRANCE_MAINLAND) || BOXES.frIslands.some((b) => inBox(p, b))) return 'fr'
+  if (inPolygon(p, ITALY_MAINLAND) || BOXES.itIslands.some((b) => inBox(p, b))) return 'it'
   return undefined
 }
