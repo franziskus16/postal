@@ -41,10 +41,12 @@ for entry in "${EXTRACTS[@]}"; do
   url="${entry#*|}"
   pbf="$WORK/$name.osm.pbf"
   echo "↓ $name"
+  # Geofabrik de vegades rebutja connexions puntualment: reintentem uns quants cops
+  RETRY=(--retry 6 --retry-delay 20 --retry-all-errors --connect-timeout 30)
   if [ -f "$pbf" ]; then
-    curl -fL -z "$pbf" -o "$pbf" "$url"   # -z: només si hi ha versió nova
+    curl -fL "${RETRY[@]}" -z "$pbf" -o "$pbf" "$url"   # -z: només si hi ha versió nova
   else
-    curl -fL -o "$pbf" "$url"
+    curl -fL "${RETRY[@]}" -o "$pbf" "$url"
   fi
 
   echo "⚙ filtrant bústies ($name)"
