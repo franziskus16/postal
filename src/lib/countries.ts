@@ -7,6 +7,7 @@ export interface Country {
   postmark: string // el que surt al mata-segells del sobre (en l'idioma del país)
   center: [number, number]
   zoom: number
+  post: { name: string; url: string } // operador postal (per comprar segells en línia)
 }
 
 export const COUNTRIES: Record<ThemeCode, Country> = {
@@ -16,6 +17,7 @@ export const COUNTRIES: Record<ThemeCode, Country> = {
     postmark: 'ESPAÑA',
     center: [-3.7, 40.2],
     zoom: 5,
+    post: { name: 'Correos', url: 'https://www.correos.es' },
   },
   pt: {
     code: 'pt',
@@ -23,6 +25,7 @@ export const COUNTRIES: Record<ThemeCode, Country> = {
     postmark: 'PORTUGAL',
     center: [-8.2, 39.6],
     zoom: 6,
+    post: { name: 'CTT', url: 'https://www.ctt.pt' },
   },
   fr: {
     code: 'fr',
@@ -30,13 +33,16 @@ export const COUNTRIES: Record<ThemeCode, Country> = {
     postmark: 'FRANCE',
     center: [2.4, 46.6],
     zoom: 5,
+    post: { name: 'La Poste', url: 'https://www.laposte.fr' },
   },
 }
 
 // Contorns aproximats (prou per saber en quin país ets; a pocs km de la
 // frontera es pot equivocar). [lng, lat]
 const PORTUGAL_MAINLAND: [number, number][] = [
-  [-8.9, 41.87], [-8.65, 42.05], [-8.2, 42.15], [-8.08, 41.81], [-7.6, 41.87],
+  // riu Minho (Tui/Valença, Salvaterra/Monção) amb més detall: hi ha pobles a tocar
+  [-8.9, 41.87], [-8.75, 41.96], [-8.64, 42.037], [-8.55, 42.06], [-8.48, 42.084],
+  [-8.33, 42.1], [-8.2, 42.15], [-8.08, 41.81], [-7.6, 41.87],
   [-7.2, 41.88], [-6.6, 41.94], [-6.19, 41.58], [-6.5, 41.27], [-6.93, 41.0],
   [-6.8, 40.25], [-7.02, 39.67], [-7.3, 39.45], [-7.05, 38.9], [-7.3, 38.45],
   [-6.93, 38.2], [-7.45, 37.85], [-7.5, 37.5], [-7.41, 37.18], [-7.9, 36.9],

@@ -11,6 +11,10 @@ export interface PostboxProps {
   note?: string
   colour?: string
   country?: string
+  // llocs on comprar segells
+  kind?: 'tobacco' | 'post_office' | 'post_partner' | 'vending'
+  name?: string
+  opening_hours?: string
 }
 
 export interface PostboxFeature {

@@ -36,6 +36,13 @@ export function tileCenter(key: string): [number, number] {
  * i les tessel·les a mesura que les necessites, sense repetir descàrregues.
  */
 export class PostboxStore {
+  /** layer: '' per a les bústies, 'stamps' per als llocs on comprar segells */
+  constructor(private layer = '') {}
+
+  private path(country: string, file: string) {
+    return this.layer ? `${country}/${this.layer}/${file}` : `${country}/${file}`
+  }
+
   private indexes = new Map<string, TileIndex>()
   private loaded = new Map<string, PostboxFeature[]>() // "país/x_y" → bústies
   private pending = new Map<string, Promise<void>>()
@@ -44,7 +51,7 @@ export class PostboxStore {
     await Promise.all(
       countries.map(async (c) => {
         try {
-          this.indexes.set(c, await loadJson<TileIndex>(`${c}/index.json`))
+          this.indexes.set(c, await loadJson<TileIndex>(this.path(c, 'index.json')))
         } catch {
           /* país sense dades encara */
         }
@@ -89,7 +96,8 @@ export class PostboxStore {
   private loadTile(id: string) {
     let p = this.pending.get(id)
     if (!p) {
-      p = loadJson<PostboxCollection>(`${id}.json`)
+      const [c, key] = id.split('/')
+      p = loadJson<PostboxCollection>(this.path(c, `${key}.json`))
         .then((fc) => {
           // cada bústia sap de quin país és (per pintar-la amb el seu color)
           const country = id.split('/')[0]

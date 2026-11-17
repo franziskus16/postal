@@ -126,6 +126,53 @@ function dots(P: Theme) {
   return toImage(c)
 }
 
+/** Rètol d'un lloc on comprar segells: forma i lletra segons el tipus. */
+function shopBadge(P: Theme, kind: 'tobacco' | 'post_office' | 'post_partner' | 'vending') {
+  const S = 30
+  const { c, ctx } = canvas(S + 4, S + 4)
+  const x = 2, y = 2, w = S - 2
+  // ombra desplaçada, com els segells
+  ctx.fillStyle = P.ink
+  ctx.globalAlpha = 0.25
+  ctx.beginPath()
+  shape(ctx, kind, x + 2, y + 2, w)
+  ctx.fill()
+  ctx.globalAlpha = 1
+
+  ctx.fillStyle = kind === 'tobacco' ? P.ink : kind === 'vending' ? P.paper : P.primary
+  ctx.strokeStyle = P.ink
+  ctx.lineWidth = 1.6
+  ctx.beginPath()
+  shape(ctx, kind, x, y, w)
+  ctx.fill()
+  if (kind === 'post_partner') ctx.setLineDash([3, 2])
+  ctx.stroke()
+  ctx.setLineDash([])
+
+  ctx.fillStyle = kind === 'tobacco' ? P.paper : kind === 'vending' ? P.ink : P.onPrimary
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.font = `800 ${kind === 'tobacco' ? 16 : 14}px system-ui, sans-serif`
+  const glyph = { tobacco: 'T', post_office: '✉', post_partner: '✉', vending: '€' }[kind]
+  ctx.fillText(glyph, x + w / 2, y + w / 2 + 1)
+  return toImage(c)
+}
+
+function shape(ctx: CanvasRenderingContext2D, kind: string, x: number, y: number, w: number) {
+  if (kind === 'tobacco') {
+    // rombe, com el rètol dels estancs i la «carotte» dels tabacs francesos
+    ctx.moveTo(x + w / 2, y)
+    ctx.lineTo(x + w, y + w / 2)
+    ctx.lineTo(x + w / 2, y + w)
+    ctx.lineTo(x, y + w / 2)
+    ctx.closePath()
+  } else if (kind === 'vending') {
+    ctx.rect(x + 4, y, w - 8, w)
+  } else {
+    ctx.rect(x + 1, y + 3, w - 2, w - 6)
+  }
+}
+
 export function addPostalIcons(map: MLMap, P: Theme) {
   const add = (id: string, img: ImageData) => {
     if (!map.hasImage(id)) map.addImage(id, img, { pixelRatio: DPR })
@@ -137,4 +184,5 @@ export function addPostalIcons(map: MLMap, P: Theme) {
   add('postal-stamp-selected', stamp(P, P.accent, P.onAccent))
   add('postal-postmark', postmark(P))
   add('postal-dots', dots(P))
+  for (const kind of ['tobacco', 'post_office', 'post_partner', 'vending'] as const) add(`postal-shop-${kind}`, shopBadge(P, kind))
 }

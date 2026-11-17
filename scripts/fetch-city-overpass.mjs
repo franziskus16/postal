@@ -1,20 +1,22 @@
-// Descarrega les bústies d'una ciutat amb l'Overpass API (ràpid, per desenvolupar).
+// Descarrega les bústies (i els llocs on comprar segells) d'una ciutat amb
+// l'Overpass API (ràpid, per desenvolupar).
 // S'afegeixen a les tessel·les del país, així pots anar sumant ciutats.
 // Ús: npm run data:city -- "Barcelona"          (Espanya per defecte)
 //     npm run data:city -- "Lisboa" pt
 //     npm run data:city -- "Paris" fr
-import { toFeatures, merge } from './slim-geojson.mjs'
+import { toFeatures, toStampFeatures, merge } from './slim-geojson.mjs'
 import { readTiles, writeTiles } from './tiles.mjs'
 
 const city = process.argv[2] || 'Barcelona'
 const country = (process.argv[3] || 'es').toLowerCase()
 
-const query = `
-[out:json][timeout:120];
-area["name"="${city}"]["boundary"="administrative"]["admin_level"~"^(7|8)$"]->.a;
-node["amenity"="post_box"](area.a);
-out body;
-`
+const AREA = `area["name"="${city}"]["boundary"="administrative"]["admin_level"~"^(7|8)$"]->.a;`
+const POSTBOX_QUERY = `[out:json][timeout:120];${AREA}node["amenity"="post_box"](area.a);out body;`
+const STAMPS_QUERY = `[out:json][timeout:120];${AREA}(
+  nwr["shop"="tobacco"](area.a);
+  nwr["amenity"~"^(post_office|post_partner)$"](area.a);
+  nwr["vending"="stamps"](area.a);
+);out center tags;`
 
 // Servidors públics d'Overpass: si un està saturat, provem el següent
 const ENDPOINTS = [
@@ -24,7 +26,7 @@ const ENDPOINTS = [
 ]
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
-async function fetchOverpass() {
+async function fetchOverpass(query) {
   let wait = 5000
   for (let attempt = 1; attempt <= 4; attempt++) {
     for (const url of ENDPOINTS) {
@@ -51,6 +53,11 @@ async function fetchOverpass() {
 }
 
 const previous = readTiles(country)
-const fc = merge([previous, toFeatures(await fetchOverpass())])
+const fc = merge([previous, toFeatures(await fetchOverpass(POSTBOX_QUERY))])
 writeTiles(country, fc.features)
 console.log(`${city}: ${fc.features.length - previous.length} bústies noves · ${fc.features.length} en total → public/data/${country}/`)
+
+const prevStamps = readTiles(country, 'stamps')
+const st = merge([prevStamps, toStampFeatures(await fetchOverpass(STAMPS_QUERY))])
+writeTiles(country, st.features, 'stamps')
+console.log(`${city}: ${st.features.length - prevStamps.length} llocs per comprar segells nous · ${st.features.length} en total → public/data/${country}/stamps/`)

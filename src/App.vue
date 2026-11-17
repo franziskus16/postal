@@ -9,6 +9,7 @@ import { nearest, formatDistance, directionsUrl, distanceMeters, type PostboxFea
 import { fetchRoute, type Route, type TravelMode } from './lib/routing'
 import { snapToRoute, pointAlong, bearing } from './lib/navigation'
 import { postalStyle } from './map/postalStyle'
+import { placeTitle, placeStatus, placeWeek, kindLabel, isShop } from './lib/placeText'
 import { t, lang, countryName, postmarkDate, applyDocumentLang } from './i18n'
 import { addPostalIcons } from './map/icons'
 import { THEMES, applyThemeCss, type ThemeCode } from './map/themes'
@@ -45,6 +46,11 @@ const theme = computed(() => THEMES[country.value])
 const countryInfo = computed(() => COUNTRIES[country.value])
 // Bústies de tots els països, per tessel·les: només es baixa la zona que mires
 const store = new PostboxStore()
+// Llocs on comprar segells (estancs, oficines de correus…), també per tessel·les
+const stampStore = new PostboxStore('stamps')
+type Section = 'boxes' | 'stamps'
+const section = ref<Section>('boxes')
+const activeStore = () => (section.value === 'boxes' ? store : stampStore)
 let indexesReady: Promise<void> = Promise.resolve()
 const hasData = ref(false)
 /** Per sota d'aquest zoom es mostra el resum per zones; per sobre, cada bústia. */
@@ -84,6 +90,7 @@ const nextStep = computed(() => {
   if (i < 0) return { ...r.steps[r.steps.length - 1], dist: remaining.value }
   return { ...r.steps[i], dist: stepAlong[i] - along.value }
 })
+const selectedIsShop = computed(() => !!selected.value && isShop(selected.value.properties))
 const eta = computed(() => Math.max(1, Math.round(remaining.value / SPEED[mode.value] / 60)))
 
 // ── Mapa ─────────────────────────────────────────
@@ -115,11 +122,20 @@ onMounted(() => {
     const zoom = await src.getClusterExpansionZoom(f.properties.cluster_id)
     m.easeTo({ center: (f.geometry as GeoJSON.Point).coordinates as [number, number], zoom })
   })
-  m.on('click', 'postbox', (e) => {
-    const id = e.features?.[0]?.properties.id
-    const f = features.value.find((x) => x.properties.id === id)
-    if (f && phase.value === 'off') select(f)
+  m.on('click', 'stamp-clusters', async (e) => {
+    const f = e.features?.[0]
+    if (!f || phase.value !== 'off') return
+    const src = m.getSource('stamps') as GeoJSONSource
+    const zoom = await src.getClusterExpansionZoom(f.properties.cluster_id)
+    m.easeTo({ center: (f.geometry as GeoJSON.Point).coordinates as [number, number], zoom })
   })
+  for (const layer of ['postbox', 'stamp-place']) {
+    m.on('click', layer, (e) => {
+      const id = e.features?.[0]?.properties.id
+      const f = features.value.find((x) => x.properties.id === id)
+      if (f && phase.value === 'off') select(f)
+    })
+  }
   // de lluny: clicar una zona hi apropa el mapa
   m.on('click', 'overview', async (e) => {
     const f = e.features?.[0]
@@ -132,15 +148,16 @@ onMounted(() => {
     }
     m.easeTo({ center, zoom })
   })
-  for (const id of ['clusters', 'postbox', 'overview']) {
+  for (const id of ['clusters', 'postbox', 'overview', 'stamp-clusters', 'stamp-place']) {
     m.on('mouseenter', id, () => (m.getCanvas().style.cursor = 'pointer'))
     m.on('mouseleave', id, () => (m.getCanvas().style.cursor = ''))
   }
 
-  indexesReady = store.loadIndexes(Object.keys(COUNTRIES)).then(() => {
-    hasData.value = Object.keys(COUNTRIES).some((c) => store.total(c) > 0)
+  const codes = Object.keys(COUNTRIES)
+  indexesReady = Promise.all([store.loadIndexes(codes), stampStore.loadIndexes(codes)]).then(() => {
+    hasData.value = codes.some((c) => store.total(c) > 0)
     updateStatus()
-    ;(map.value?.getSource('overview') as GeoJSONSource | undefined)?.setData(store.overview())
+    ;(map.value?.getSource('overview') as GeoJSONSource | undefined)?.setData(activeStore().overview())
     loadVisibleTiles()
   })
   m.on('moveend', () => {
@@ -179,7 +196,7 @@ function addAppLayers() {
   // De lluny: quantes bústies hi ha a cada zona (de l'índex, sense baixar-les)
   m.addSource('overview', {
     type: 'geojson',
-    data: store.overview(),
+    data: activeStore().overview(),
     cluster: true,
     clusterRadius: 60,
     clusterProperties: { total: ['+', ['get', 'count']] },
@@ -216,6 +233,7 @@ function addAppLayers() {
     minzoom: DETAIL_ZOOM,
     filter: ['has', 'point_count'],
     layout: {
+      visibility: section.value === 'boxes' ? 'visible' : 'none',
       'icon-image': 'postal-postmark',
       'icon-size': ['step', ['get', 'point_count'], 0.85, 25, 1, 100, 1.2],
       'icon-allow-overlap': true,
@@ -233,6 +251,7 @@ function addAppLayers() {
     minzoom: DETAIL_ZOOM,
     filter: ['!', ['has', 'point_count']],
     layout: {
+      visibility: section.value === 'boxes' ? 'visible' : 'none',
       // bústies blaves (Correio Azul) amb el seu color; la resta, el del país
       'icon-image': [
         'match',
@@ -254,12 +273,85 @@ function addAppLayers() {
     filter: ['==', ['get', 'id'], selected.value?.properties.id ?? ''],
     layout: { 'icon-image': 'postal-stamp-selected', 'icon-size': 1.3, 'icon-allow-overlap': true },
   })
+
+  // ── Llocs on comprar segells ──
+  const stampsVisible = section.value === 'stamps' ? 'visible' : 'none'
+  m.addSource('stamps', {
+    type: 'geojson',
+    data: stampStore.collection(),
+    cluster: true,
+    clusterRadius: 44,
+    clusterMaxZoom: 15,
+    attribution: '© OpenStreetMap contributors',
+  })
+  m.addLayer({
+    id: 'stamp-clusters',
+    type: 'symbol',
+    source: 'stamps',
+    minzoom: DETAIL_ZOOM,
+    filter: ['has', 'point_count'],
+    layout: {
+      visibility: stampsVisible,
+      'icon-image': 'postal-postmark',
+      'icon-size': ['step', ['get', 'point_count'], 0.85, 25, 1, 100, 1.2],
+      'icon-allow-overlap': true,
+      'text-field': ['get', 'point_count_abbreviated'],
+      'text-font': ['Noto Sans Bold'],
+      'text-size': 12,
+      'text-allow-overlap': true,
+    },
+    paint: { 'text-color': T.ink },
+  })
+  m.addLayer({
+    id: 'stamp-place',
+    type: 'symbol',
+    source: 'stamps',
+    minzoom: DETAIL_ZOOM,
+    filter: ['!', ['has', 'point_count']],
+    layout: {
+      visibility: stampsVisible,
+      'icon-image': ['concat', 'postal-shop-', ['get', 'kind']],
+      'icon-size': ['interpolate', ['linear'], ['zoom'], 12, 0.7, 17, 1],
+      'icon-allow-overlap': true,
+    },
+  })
+  m.addLayer({
+    id: 'stamp-selected',
+    type: 'symbol',
+    source: 'stamps',
+    filter: ['==', ['get', 'id'], selected.value?.properties.id ?? ''],
+    layout: {
+      visibility: stampsVisible,
+      'icon-image': ['concat', 'postal-shop-', ['get', 'kind']],
+      'icon-size': 1.45,
+      'icon-allow-overlap': true,
+    },
+  })
+}
+
+/** Canvia entre bústies i segells: capes visibles, resum, llista i estat. */
+function setSection(s: Section) {
+  if (s === section.value) return
+  section.value = s
+  select(undefined)
+  results.value = []
+  const m = map.value
+  if (m?.getLayer('postbox')) {
+    const show = (ids: string[], on: boolean) => ids.forEach((id) => m.setLayoutProperty(id, 'visibility', on ? 'visible' : 'none'))
+    show(['clusters', 'postbox'], s === 'boxes')
+    show(['stamp-clusters', 'stamp-place', 'stamp-selected'], s === 'stamps')
+    ;(m.getSource('overview') as GeoJSONSource | undefined)?.setData(activeStore().overview())
+  }
+  features.value = activeStore().features()
+  updateStatus()
+  loadVisibleTiles()
+  if (lastKnown) updateNearest(lastKnown)
 }
 
 function updateStatus() {
-  const total = store.total(country.value)
+  const total = activeStore().total(country.value)
   status.value = total
-    ? t('count', { n: total.toLocaleString(lang.value) })
+    ? t(section.value === 'boxes' ? 'count' : 'countStamps', { n: total.toLocaleString(lang.value) })
     : t('noData', { country: countryName(country.value) })
 }
 
@@ -268,18 +360,19 @@ async function loadVisibleTiles() {
   const m = map.value
   if (!m || m.getZoom() < DETAIL_ZOOM - 0.5) return
   const b = m.getBounds()
-  if (await store.ensureBounds([b.getWest(), b.getSouth(), b.getEast(), b.getNorth()])) refreshPostboxes()
+  if (await activeStore().ensureBounds([b.getWest(), b.getSouth(), b.getEast(), b.getNorth()])) refreshPostboxes()
 }
 
 function refreshPostboxes() {
-  features.value = store.features()
-  ;(map.value?.getSource('busties') as GeoJSONSource | undefined)?.setData(store.collection())
+  features.value = activeStore().features()
+  const src = section.value === 'boxes' ? 'busties' : 'stamps'
+  ;(map.value?.getSource(src) as GeoJSONSource | undefined)?.setData(activeStore().collection())
 }
 
 /** Bústies més properes a un punt (baixa abans les tessel·les del voltant). */
 async function updateNearest(pos: LngLat) {
   await indexesReady
-  if (await store.ensureAround(pos)) refreshPostboxes()
+  if (await activeStore().ensureAround(pos)) refreshPostboxes()
   results.value = nearest(pos, features.value, 5)
 }
 
@@ -322,7 +415,11 @@ function lngLatOf(f: PostboxFeature): LngLat {
 
 function select(f?: PostboxFeature) {
   selected.value = f
-  map.value?.setFilter('postbox-selected', ['==', ['get', 'id'], f?.properties.id ?? ''])
+  const filter: maplibregl.FilterSpecification = ['==', ['get', 'id'], f?.properties.id ?? '']
+  if (map.value?.getLayer('postbox-selected')) {
+    map.value.setFilter('postbox-selected', filter)
+    map.value.setFilter('stamp-selected', filter)
+  }
   if (f) map.value?.easeTo({ center: f.geometry.coordinates, zoom: Math.max(map.value.getZoom(), 17) })
 }
 
@@ -586,7 +683,7 @@ function arrowElement() {
 
     <!-- La carta, en primer pla, com si la portessis a la mà -->
     <div
-      v-if="phase === 'on' || phase === 'arrived'"
+      v-if="(phase === 'on' || phase === 'arrived') && !selectedIsShop"
       class="letter"
       :class="{ walking: moving, bike: mode === 'bike', posted: phase === 'arrived' }"
       aria-hidden="true"
@@ -625,7 +722,7 @@ function arrowElement() {
             <span class="denom">{{ formatDistance(remaining) }}</span>
             <span class="meta">
               <strong>{{ t(mode === 'foot' ? 'minOnFoot' : 'minByBike', { n: eta }) }}</strong>
-              <small>{{ t('toPostbox') }}</small>
+              <small>{{ selectedIsShop && selected ? placeTitle(selected.properties) : t('toPostbox') }}</small>
             </span>
             <button class="ghost" @click="stopNavigation">{{ t('stop') }}</button>
           </div>
@@ -634,8 +731,12 @@ function arrowElement() {
         <!-- Arribada -->
         <template v-else-if="phase === 'arrived'">
           <div class="arrived">
-            <span class="arrived-stamp" aria-hidden="true">✉</span>
-            <div>
+            <span class="arrived-stamp" aria-hidden="true">{{ selectedIsShop ? '€' : '✉' }}</span>
+            <div v-if="selectedIsShop">
+              <strong>{{ t('arrivedShop') }}</strong>
+              <small>{{ t('arrivedShopSub') }}</small>
+            </div>
+            <div v-else>
               <strong>{{ t('sent') }}</strong>
               <small>{{ recipient ? t('sentTo', { name: recipient }) : t('inBox') }}</small>
             </div>
@@ -643,12 +744,19 @@ function arrowElement() {
           <button class="primary" @click="stopNavigation(); select()">{{ t('done') }}</button>
         </template>
 
-        <!-- Bústia seleccionada -->
+        <!-- Bústia o lloc seleccionat -->
         <template v-else-if="selected">
           <div class="card-head">
             <div>
-              <strong>{{ selected.properties.operator || t('postbox') }}</strong>
-              <small>{{ selected.properties.collection_times || t('unknownTimes') }}</small>
+              <strong>{{ placeTitle(selected.properties) }}</strong>
+              <small v-if="selectedIsShop && selected.properties.name">{{ kindLabel(selected.properties) }}</small>
+              <span
+                class="state"
+                :class="{ good: placeStatus(selected.properties).good === true, bad: placeStatus(selected.properties).good === false }"
+              >
+                {{ placeStatus(selected.properties).text }}
+              </span>
+              <small v-if="placeWeek(selected.properties)" class="week">{{ placeWeek(selected.properties) }}</small>
             </div>
             <button class="ghost" :aria-label="t('close')" @click="select()">✕</button>
           </div>
@@ -660,7 +768,7 @@ function arrowElement() {
               {{ t('byBike') }}
             </button>
           </div>
-          <label class="to-field">
+          <label v-if="!selectedIsShop" class="to-field">
             <span>{{ t('toWhom') }}</span>
             <input v-model.trim="recipient" maxlength="40" :placeholder="t('optional')" autocomplete="off" />
           </label>
@@ -671,21 +779,51 @@ function arrowElement() {
           <a class="gmaps" :href="directionsUrl(lngLatOf(selected), mode)" target="_blank" rel="noopener">
             {{ t('openGoogle') }}
           </a>
+          <a v-if="selectedIsShop" class="gmaps" :href="countryInfo.post.url" target="_blank" rel="noopener">
+            {{ t('buyOnline', { post: countryInfo.post.name }) }}
+          </a>
         </template>
 
         <!-- Inici -->
         <template v-else>
+          <div class="sections" role="tablist">
+            <button
+              role="tab"
+              :aria-selected="section === 'boxes'"
+              :class="{ on: section === 'boxes' }"
+              @click="setSection('boxes')"
+            >
+              ✉ {{ t('sectionBoxes') }}
+            </button>
+            <button
+              role="tab"
+              :aria-selected="section === 'stamps'"
+              :class="{ on: section === 'stamps' }"
+              @click="setSection('stamps')"
+            >
+              € {{ t('sectionStamps') }}
+            </button>
+          </div>
           <button class="primary" :disabled="busy || !hasData" @click="locateMe">
-            <span class="primary-stamp" aria-hidden="true">✉</span>
-            {{ busy ? t('searching') : t('findNearest') }}
+            <span class="primary-stamp" aria-hidden="true">{{ section === 'boxes' ? '✉' : '€' }}</span>
+            {{ busy ? t('searching') : section === 'boxes' ? t('findNearest') : t('findStamps') }}
           </button>
           <ol v-if="results.length" class="list">
             <li v-for="(r, i) in results" :key="r.feature.properties.id">
               <button class="item" @click="select(r.feature)">
                 <span class="denom">{{ formatDistance(r.distance) }}</span>
                 <span class="meta">
-                  <strong>{{ i === 0 ? t('nearest') : r.feature.properties.operator || t('postbox') }}</strong>
-                  <small>{{ r.feature.properties.collection_times || t('unknownTimes') }}</small>
+                  <strong>
+                    {{ i === 0 && section === 'boxes' ? t('nearest') : placeTitle(r.feature.properties) }}
+                  </strong>
+                  <small
+                    :class="{
+                      good: placeStatus(r.feature.properties).good === true,
+                      bad: placeStatus(r.feature.properties).good === false,
+                    }"
+                  >
+                    {{ placeStatus(r.feature.properties).text }}
+                  </small>
                 </span>
                 <span class="go">→</span>
               </button>
@@ -862,6 +1000,22 @@ function arrowElement() {
 .meta small, .card-head small, .arrived small { font-family: var(--font-mono); font-size: 11px; color: var(--ink-soft); }
 .go { color: var(--accent); font-weight: 800; font-size: 18px; }
 
+.sections { display: grid; grid-template-columns: 1fr 1fr; margin-bottom: 12px; border: 1.5px solid var(--ink); }
+.sections button {
+  padding: 9px 10px;
+  border: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 15px;
+}
+.sections button + button { border-left: 1.5px solid var(--ink); }
+.sections button.on { background: var(--ink); color: var(--paper); }
+.state { font-family: var(--font-mono); font-size: 12px; font-weight: 600; color: var(--ink); }
+.state.good, .meta small.good { color: var(--accent-good, #1E8A4C); }
+.state.bad, .meta small.bad { color: var(--ink-soft); }
+.week { opacity: .85; }
 .card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
 .card-head > div { display: flex; flex-direction: column; gap: 3px; }
 .modes { display: grid; grid-template-columns: 1fr 1fr; margin: 14px 0; border: 1.5px solid var(--ink); }

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Genera les bústies d'un país a partir d'OSM, partides en tessel·les:
 #   public/data/<país>/index.json + public/data/<país>/<x>_<y>.json
+# i els llocs on comprar segells a public/data/<país>/stamps/
 # Ús:  bash scripts/build-data.sh es   |   pt   |   fr
 #      (CLEAN=1 esborra els mapes descarregats en acabar; útil a GitHub Actions)
 # Requereix osmium-tool:  brew install osmium-tool   |   sudo apt install osmium-tool
@@ -15,6 +16,16 @@ mkdir -p "$WORK" public/data
 # Extractes de Geofabrik per país, en format "nom|url".
 # Les illes que Geofabrik té a part s'hi afegeixen; els duplicats s'eliminen per id.
 # (Sense arrays associatius: el bash de macOS és la 3.2.)
+# On es venen segells a cada país (etiquetes d'OSM):
+#  - Espanya: estancs i oficines de Correos
+#  - Portugal: botigues CTT, punts col·laboradors (postos de correio) i màquines
+#  - França: bureaux de tabac, oficines de La Poste, punts col·laboradors i màquines
+case "$COUNTRY" in
+  es) STAMP_FILTERS=(nwr/shop=tobacco nwr/amenity=post_office nwr/vending=stamps) ;;
+  pt) STAMP_FILTERS=(nwr/amenity=post_office nwr/amenity=post_partner nwr/vending=stamps) ;;
+  fr) STAMP_FILTERS=(nwr/shop=tobacco nwr/amenity=post_office nwr/amenity=post_partner nwr/vending=stamps) ;;
+esac
+
 case "$COUNTRY" in
   es)
     EXTRACTS=(
@@ -36,6 +47,7 @@ case "$COUNTRY" in
 esac
 
 INPUTS=()
+STAMP_INPUTS=()
 for entry in "${EXTRACTS[@]}"; do
   name="${entry%%|*}"
   url="${entry#*|}"
@@ -54,8 +66,15 @@ for entry in "${EXTRACTS[@]}"; do
   osmium export "$WORK/$name-pb.osm.pbf" -f geojson --add-unique-id=type_id \
     -o "$WORK/$name-pb.geojson" --overwrite
   INPUTS+=("$WORK/$name-pb.geojson")
+
+  echo "⚙ filtrant llocs on comprar segells ($name)"
+  osmium tags-filter "$pbf" "${STAMP_FILTERS[@]}" -o "$WORK/$name-st.osm.pbf" --overwrite
+  osmium export "$WORK/$name-st.osm.pbf" -f geojson --add-unique-id=type_id \
+    -o "$WORK/$name-st.geojson" --overwrite
+  STAMP_INPUTS+=("$WORK/$name-st.geojson")
   if [ "${CLEAN:-0}" = "1" ]; then rm -f "$pbf"; fi   # el mapa sencer ja no cal
 done
 
 node scripts/tiles.mjs "$COUNTRY" "${INPUTS[@]}"
+node scripts/tiles.mjs "$COUNTRY" --stamps "${STAMP_INPUTS[@]}"
 rm -f "public/data/busties-$COUNTRY.geojson"   # format antic (un sol fitxer per país)

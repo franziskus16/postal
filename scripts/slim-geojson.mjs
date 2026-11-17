@@ -37,6 +37,46 @@ export function toFeatures(input) {
   throw new Error('Format no reconegut')
 }
 
+/** Tipus de lloc on es poden comprar segells, a partir de les etiquetes d'OSM. */
+export function stampKind(tags = {}) {
+  if (tags.vending === 'stamps' || /(^|;)stamps(;|$)/.test(tags.vending ?? '')) return 'vending'
+  if (tags.amenity === 'post_office') return 'post_office'
+  if (tags.amenity === 'post_partner') return 'post_partner'
+  if (tags.shop === 'tobacco') return 'tobacco'
+  return null
+}
+
+/** Punt representatiu d'una geometria (els edificis de correus solen ser polígons). */
+function centroid(geom) {
+  if (geom.type === 'Point') return geom.coordinates
+  const pts = []
+  const walk = (c) => (typeof c[0] === 'number' ? pts.push(c) : c.forEach(walk))
+  walk(geom.coordinates)
+  if (!pts.length) return null
+  return [pts.reduce((s, p) => s + p[0], 0) / pts.length, pts.reduce((s, p) => s + p[1], 0) / pts.length]
+}
+
+/** Llocs on comprar segells: estancs, oficines de correus, punts col·laboradors i màquines. */
+export function toStampFeatures(input) {
+  const items =
+    input.type === 'FeatureCollection'
+      ? input.features.map((f) => ({ id: f.id ?? f.properties?.id, geom: f.geometry, tags: f.properties ?? {} }))
+      : input.elements.map((e) => ({
+          id: `${e.type[0]}${e.id}`,
+          geom: { type: 'Point', coordinates: [e.lon ?? e.center?.lon, e.lat ?? e.center?.lat] },
+          tags: e.tags ?? {},
+        }))
+  const round = (n) => Math.round(n * 1e6) / 1e6
+  return items.flatMap(({ id, geom, tags }) => {
+    const kind = tags.kind ?? stampKind(tags)
+    const c = geom && centroid(geom)
+    if (!kind || !c || c.some((n) => n == null || Number.isNaN(n))) return []
+    const props = { id: String(id), kind }
+    for (const k of ['name', 'opening_hours', 'operator']) if (tags[k]) props[k] = tags[k]
+    return [{ type: 'Feature', geometry: { type: 'Point', coordinates: [round(c[0]), round(c[1])] }, properties: props }]
+  })
+}
+
 export function merge(collections) {
   const byId = new Map()
   for (const feats of collections) for (const f of feats) byId.set(f.properties.id, f)
