@@ -1,0 +1,80 @@
+:root {
+  /* POSTAL · risograph: paper + tinta blava, groga i vermella */
+  --paper: #F7F2E6;
+  --ink: #2C4BA0;
+  --ink-soft: #6C7DB8;
+  /* valors per defecte (Espanya); el tema de cada país els sobreescriu */
+  --primary: #FFD93B;
+  --on-primary: #2C4BA0;
+  --accent: #F15060;
+  --on-accent: #F7F2E6;
+  --stripe: #F15060;
+  /* gra de paper (soroll SVG) */
+  --riso-grain: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .17  0 0 0 0 .29  0 0 0 0 .63  0 0 0 .55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  --airmail-stripes: repeating-linear-gradient(
+    -45deg,
+    var(--stripe) 0 25%, var(--paper) 25% 50%, var(--ink) 50% 75%, var(--paper) 75% 100%
+  );
+  --font-display: 'Bricolage Grotesque', 'Avenir Next', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+  --font-hand: 'Caveat', 'Bradley Hand', cursive;
+
+  font-family: var(--font-display);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+}
+html, body, #app { margin: 0; height: 100%; background: var(--paper); }
+* { box-sizing: border-box; }
+button { font: inherit; cursor: pointer; }
+
+/* ── Controls de MapLibre amb l'estètica POSTAL ── */
+.maplibregl-ctrl-top-right { top: calc(env(safe-area-inset-top, 0px) + 6px); }
+.maplibregl-ctrl-group {
+  border-radius: 0 !important;
+  border: 1.5px solid var(--ink);
+  box-shadow: 3px 3px 0 var(--ink) !important;
+  background: var(--paper) !important;
+}
+.maplibregl-ctrl-group button + button { border-top: 1.5px solid var(--ink) !important; }
+.maplibregl-ctrl-attrib { background: rgb(247 242 230 / .85) !important; font-family: var(--font-mono); font-size: 10px; }
+
+/* ── Fitxa de la bústia (postal) ── */
+.postal-popup .maplibregl-popup-content {
+  padding: 14px 16px 12px;
+  border-radius: 0;
+  background: var(--paper);
+  border: 1.5px solid var(--ink);
+  box-shadow: 4px 4px 0 var(--ink);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--ink);
+  background-image: linear-gradient(var(--paper), var(--paper)), var(--airmail-stripes);
+  background-clip: padding-box, border-box;
+}
+.postal-popup .maplibregl-popup-tip { display: none; }
+.postal-popup .maplibregl-popup-close-button { font-size: 18px; color: var(--ink); padding: 2px 6px; }
+.postal-popup .pc-head {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 16px;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 3px solid transparent;
+  border-image: var(--airmail-stripes) 3;
+  border-image-width: 0 0 3px 0;
+}
+.postal-popup .pc-row { display: flex; gap: 8px; padding: 2px 0; }
+.postal-popup .pc-row span { color: var(--ink-soft); min-width: 70px; text-transform: uppercase; font-size: 10px; letter-spacing: .08em; padding-top: 1px; }
+.postal-popup .pc-go { display: inline-block; margin-top: 10px; color: var(--ink); font-weight: 600; text-decoration: none; }
+
+/* ── «Ets aquí» ── */
+.you-are-here {
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: var(--ink);
+  border: 3px solid var(--paper);
+  box-shadow: 0 0 0 1.5px var(--ink), 0 0 0 8px rgb(44 75 160 / .18);
+}
+
+/* ── Fletxa de navegació ── */
+.nav-arrow { filter: drop-shadow(0 1px 0 rgb(0 0 0 / .1)); }

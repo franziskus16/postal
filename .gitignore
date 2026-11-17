@@ -1,0 +1,6 @@
+node_modules
+dist
+.osm-cache
+android/app/build
+ios/App/Pods
+_to_delete
