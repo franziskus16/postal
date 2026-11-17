@@ -12,7 +12,8 @@
     "cap:sync": "VITE_DATA_BASE=https://franziskus16.github.io/postal/data/ npm run build && npx cap sync",
     "data:spain": "bash scripts/build-data.sh es",
     "data:portugal": "bash scripts/build-data.sh pt",
-    "data:all": "npm run data:spain && npm run data:portugal"
+    "data:all": "bash scripts/build-all.sh",
+    "data:france": "bash scripts/build-data.sh fr"
   },
   "dependencies": {
     "@capacitor/core": "^7.0.0",

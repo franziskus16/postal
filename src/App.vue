@@ -2,7 +2,7 @@
 import { computed, nextTick, onMounted, onBeforeUnmount, ref, shallowRef } from 'vue'
 import * as maplibregl from 'maplibre-gl'
 import type { GeoJSONSource, Map as MLMap } from 'maplibre-gl'
-import { loadCountryFile } from './lib/data'
+import { PostboxStore } from './lib/tiles'
 import { COUNTRIES, detectCountry } from './lib/countries'
 import { getCurrentPosition, watchPosition, type Fix } from './lib/location'
 import { nearest, formatDistance, directionsUrl, distanceMeters, type PostboxFeature, type LngLat } from './lib/geo'
@@ -11,7 +11,6 @@ import { snapToRoute, pointAlong, bearing } from './lib/navigation'
 import { postalStyle } from './map/postalStyle'
 import { addPostalIcons } from './map/icons'
 import { THEMES, applyThemeCss, type ThemeCode } from './map/themes'
-import type { PostboxCollection } from './lib/geo'
 
 /**
  * Mode simulació per provar sense sortir de casa: la fletxa recorre la ruta sola.
@@ -42,9 +41,12 @@ const mode = ref<TravelMode>('foot')
 const country = ref<ThemeCode>('es')
 const theme = computed(() => THEMES[country.value])
 const countryInfo = computed(() => COUNTRIES[country.value])
-const EMPTY: PostboxCollection = { type: 'FeatureCollection', features: [] }
-let currentData: PostboxCollection = EMPTY
-const dataCache = new Map<ThemeCode, PostboxCollection>()
+// Bústies de tots els països, per tessel·les: només es baixa la zona que mires
+const store = new PostboxStore()
+let indexesReady: Promise<void> = Promise.resolve()
+const hasData = ref(false)
+/** Per sota d'aquest zoom es mostra el resum per zones; per sobre, cada bústia. */
+const DETAIL_ZOOM = 9
 let routeCoords: [number, number][] = []
 
 // ── Estat de navegació ───────────────────────────
@@ -120,12 +122,30 @@ onMounted(() => {
     const f = features.value.find((x) => x.properties.id === id)
     if (f && phase.value === 'off') select(f)
   })
-  for (const id of ['clusters', 'postbox']) {
+  // de lluny: clicar una zona hi apropa el mapa
+  m.on('click', 'overview', async (e) => {
+    const f = e.features?.[0]
+    if (!f || phase.value !== 'off') return
+    const center = (f.geometry as GeoJSON.Point).coordinates as [number, number]
+    let zoom = DETAIL_ZOOM + 1
+    if (f.properties.cluster_id !== undefined) {
+      const src = m.getSource('overview') as GeoJSONSource
+      zoom = Math.min(DETAIL_ZOOM + 1, await src.getClusterExpansionZoom(f.properties.cluster_id))
+    }
+    m.easeTo({ center, zoom })
+  })
+  for (const id of ['clusters', 'postbox', 'overview']) {
     m.on('mouseenter', id, () => (m.getCanvas().style.cursor = 'pointer'))
     m.on('mouseleave', id, () => (m.getCanvas().style.cursor = ''))
   }
 
-  loadCountryData(country.value)
+  indexesReady = store.loadIndexes(Object.keys(COUNTRIES)).then(() => {
+    hasData.value = Object.keys(COUNTRIES).some((c) => store.total(c) > 0)
+    updateStatus()
+    ;(map.value?.getSource('overview') as GeoJSONSource | undefined)?.setData(store.overview())
+    loadVisibleTiles()
+  })
+  m.on('moveend', loadVisibleTiles)
   locateOnStart() // sense esperar: el mapa ja es veu mentre el GPS respon
 })
 
@@ -155,9 +175,34 @@ function addAppLayers() {
     paint: { 'line-color': T.accent, 'line-width': 6 },
   })
 
+  // De lluny: quantes bústies hi ha a cada zona (de l'índex, sense baixar-les)
+  m.addSource('overview', {
+    type: 'geojson',
+    data: store.overview(),
+    cluster: true,
+    clusterRadius: 60,
+    clusterProperties: { total: ['+', ['get', 'count']] },
+  })
+  m.addLayer({
+    id: 'overview',
+    type: 'symbol',
+    source: 'overview',
+    maxzoom: DETAIL_ZOOM,
+    layout: {
+      'icon-image': 'postal-postmark',
+      'icon-size': ['interpolate', ['linear'], ['coalesce', ['get', 'total'], ['get', 'count']], 1, 0.8, 1000, 1.3],
+      'icon-allow-overlap': true,
+      'text-field': ['to-string', ['coalesce', ['get', 'total'], ['get', 'count']]],
+      'text-font': ['Noto Sans Bold'],
+      'text-size': 11,
+      'text-allow-overlap': true,
+    },
+    paint: { 'text-color': T.stripe },
+  })
+
   m.addSource('busties', {
     type: 'geojson',
-    data: currentData,
+    data: store.collection(),
     cluster: true,
     clusterRadius: 48,
     clusterMaxZoom: 15,
@@ -167,6 +212,7 @@ function addAppLayers() {
     id: 'clusters',
     type: 'symbol',
     source: 'busties',
+    minzoom: DETAIL_ZOOM,
     filter: ['has', 'point_count'],
     layout: {
       'icon-image': 'postal-postmark',
@@ -183,6 +229,7 @@ function addAppLayers() {
     id: 'postbox',
     type: 'symbol',
     source: 'busties',
+    minzoom: DETAIL_ZOOM,
     filter: ['!', ['has', 'point_count']],
     layout: {
       // bústies blaves (Correio Azul) amb el seu color; la resta, el del país
@@ -202,44 +249,43 @@ function addAppLayers() {
   })
 }
 
-/** Carrega (o treu de la memòria cau) les bústies d'un país. */
-async function loadCountryData(code: ThemeCode) {
-  const info = COUNTRIES[code]
-  status.value = 'Carregant bústies…'
-  let data = dataCache.get(code)
-  try {
-    data ??= await loadCountryFile(info.data)
-    dataCache.set(code, data)
-  } catch {
-    data = EMPTY
-  }
-  if (code !== country.value) return // l'usuari ha canviat de país mentrestant
-  currentData = data
-  features.value = data.features
-  ;(map.value?.getSource('busties') as GeoJSONSource | undefined)?.setData(data)
-  status.value = data.features.length
-    ? `${data.features.length.toLocaleString('ca')} bústies`
-    : `Encara sense dades · ${info.name}`
-
-  if (lastKnown && detectCountry(lastKnown) === code) {
-    results.value = nearest(lastKnown, features.value, 5)
-    await nextTick()
-    if (phase.value === 'off' && !selected.value)
-      map.value?.easeTo({ center: [lastKnown.lng, lastKnown.lat], padding: sheetPadding() })
-  } else {
-    results.value = []
-  }
+function updateStatus() {
+  const total = store.total(country.value)
+  status.value = total ? `${total.toLocaleString('ca')} bústies` : `Encara sense dades · ${countryInfo.value.name}`
 }
 
-/** Canvia de país: tema (mapa + interfície) i dades. */
-async function setCountry(code: ThemeCode, fly = false) {
+/** Baixa les tessel·les de la zona visible (només si estàs prou a prop). */
+async function loadVisibleTiles() {
+  const m = map.value
+  if (!m || m.getZoom() < DETAIL_ZOOM - 0.5) return
+  const b = m.getBounds()
+  if (await store.ensureBounds([b.getWest(), b.getSouth(), b.getEast(), b.getNorth()])) refreshPostboxes()
+}
+
+function refreshPostboxes() {
+  features.value = store.features()
+  ;(map.value?.getSource('busties') as GeoJSONSource | undefined)?.setData(store.collection())
+}
+
+/** Bústies més properes a un punt (baixa abans les tessel·les del voltant). */
+async function updateNearest(pos: LngLat) {
+  await indexesReady
+  if (await store.ensureAround(pos)) refreshPostboxes()
+  results.value = nearest(pos, features.value, 5)
+}
+
+/** Canvia de país: el tema (mapa + interfície). Les bústies ja hi són totes. */
+function setCountry(code: ThemeCode, fly = false) {
   if (code === country.value) return
   country.value = code
   applyThemeCss(theme.value)
   select(undefined)
   map.value?.setStyle(postalStyle(theme.value)) // 'style.load' hi torna a posar les capes
-  if (fly) map.value?.flyTo({ center: COUNTRIES[code].center, zoom: COUNTRIES[code].zoom, padding: sheetPadding() })
-  await loadCountryData(code)
+  if (fly) {
+    results.value = []
+    map.value?.flyTo({ center: COUNTRIES[code].center, zoom: COUNTRIES[code].zoom, padding: sheetPadding() })
+  }
+  updateStatus()
 }
 
 function nextCountry() {
@@ -287,8 +333,8 @@ function savedPosition(): LngLat | undefined {
   }
 }
 
-/** Pinta el punt blau «ets aquí» i recorda la posició per a la propera vegada. */
-function placeUser(pos: LngLat) {
+/** Pinta el punt blau «ets aquí», tria el tema del país i busca les bústies properes. */
+async function placeUser(pos: LngLat) {
   const m = map.value
   if (!m) return
   lastKnown = pos
@@ -302,8 +348,8 @@ function placeUser(pos: LngLat) {
   el.className = 'you-are-here'
   userMarker = new maplibregl.Marker({ element: el }).setLngLat([pos.lng, pos.lat]).addTo(m)
   const here = detectCountry(pos)
-  if (here && here !== country.value) setCountry(here) // carrega les dades i el tema del país on ets
-  else if (features.value.length) results.value = nearest(pos, features.value, 5)
+  if (here) setCountry(here) // tema del país on ets
+  await updateNearest(pos)
 }
 
 /** En obrir l'app: centra el mapa on ets i mostra les bústies més properes. */
@@ -316,7 +362,7 @@ async function locateOnStart() {
   try {
     const pos = await myPosition()
     if (phase.value !== 'off' || selected.value) return // l'usuari ja ha començat a fer coses
-    placeUser(pos)
+    await placeUser(pos)
     await nextTick() // esperem que la llista surti per saber quant ocupa el full
     map.value?.flyTo({ center: [pos.lng, pos.lat], zoom: 16, duration: 1200, padding: sheetPadding() })
   } catch {
@@ -330,7 +376,7 @@ async function locateMe() {
   busy.value = true
   try {
     const pos = await myPosition()
-    placeUser(pos)
+    await placeUser(pos)
     await nextTick()
     m.flyTo({ center: [pos.lng, pos.lat], zoom: 16, padding: sheetPadding() })
     if (!results.value.length) status.value = 'Cap bústia a les dades'
@@ -612,7 +658,7 @@ function arrowElement() {
 
         <!-- Inici -->
         <template v-else>
-          <button class="primary" :disabled="busy || !features.length" @click="locateMe">
+          <button class="primary" :disabled="busy || !hasData" @click="locateMe">
             <span class="primary-stamp" aria-hidden="true">✉</span>
             {{ busy ? 'Buscant…' : 'Troba la bústia més propera' }}
           </button>

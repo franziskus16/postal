@@ -3,6 +3,7 @@
  * el color de les seves bústies:
  *  - Espanya: groc Correos + vermell (els colors de la bandera)
  *  - Portugal: vermell CTT + verd (també els de la bandera)
+ *  - França: groc La Poste + blau La Poste, amb el vermell de la bandera
  * La tinta blava de les línies és comuna a tots dos.
  */
 export interface Theme {
@@ -52,6 +53,20 @@ export const THEMES = {
     onAccent: '#F8F1EC',
     stripe: '#E5402E',
     building: '#EAE1E2',
+  },
+  fr: {
+    ...shared,
+    paper: '#F6F3EC',
+    ink: '#1B2F86', // blau La Poste, més fosc que el riso blue
+    inkSoft: '#5D6BA8',
+    primary: '#FFC20E', // groc La Poste, més càlid que el de Correos
+    onPrimary: '#1B2F86',
+    primaryTint: '#FDE9A6',
+    primaryTint2: '#F7DA80',
+    accent: '#E8343A', // vermell de la bandera
+    onAccent: '#F6F3EC',
+    stripe: '#E8343A',
+    water: '#BFCBEA',
   },
 } satisfies Record<string, Theme>
 

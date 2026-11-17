@@ -5,7 +5,6 @@ export interface Country {
   code: ThemeCode
   name: string // en català, per a la interfície
   postmark: string // el que surt al mata-segells del sobre
-  data: string // fitxer generat per scripts/build-data.sh (dins de /data/)
   center: [number, number]
   zoom: number
 }
@@ -15,7 +14,6 @@ export const COUNTRIES: Record<ThemeCode, Country> = {
     code: 'es',
     name: 'Espanya',
     postmark: 'ESPANYA',
-    data: 'busties-es.geojson',
     center: [-3.7, 40.2],
     zoom: 5,
   },
@@ -23,9 +21,15 @@ export const COUNTRIES: Record<ThemeCode, Country> = {
     code: 'pt',
     name: 'Portugal',
     postmark: 'PORTUGAL',
-    data: 'busties-pt.geojson',
     center: [-8.2, 39.6],
     zoom: 6,
+  },
+  fr: {
+    code: 'fr',
+    name: 'França',
+    postmark: 'FRANCE',
+    center: [2.4, 46.6],
+    zoom: 5,
   },
 }
 
@@ -39,6 +43,15 @@ const PORTUGAL_MAINLAND: [number, number][] = [
   [-9.0, 36.9], [-8.95, 37.95], [-9.6, 38.75], [-9.5, 39.4], [-9.0, 40.2],
   [-8.75, 41.0], [-8.9, 41.87],
 ]
+// França metropolitana: frontera terrestre aproximada + mar (Còrsega a part)
+const FRANCE_MAINLAND: [number, number][] = [
+  [2.55, 51.09], [3.2, 50.75], [4.2, 49.95], [4.85, 49.8], [5.8, 49.55], [6.5, 49.45],
+  [7.6, 49.05], [8.2, 48.97], [7.55, 47.6], [6.95, 47.25], [6.1, 46.4], [6.15, 46.15],
+  [7.0, 45.9], [6.62, 45.1], [7.0, 44.25], [7.53, 43.78], [7.7, 43.3], [6.0, 42.8],
+  [3.25, 42.42], [2.5, 42.36], [1.8, 42.44], [0.7, 42.75], [-0.3, 42.82], [-1.0, 43.05],
+  [-1.79, 43.37], [-2.2, 43.6], [-2.0, 46.0], [-5.5, 48.3], [-4.8, 48.95], [-1.9, 49.8],
+  [1.4, 50.4], [2.55, 51.09],
+]
 const BOXES: Record<string, [number, number, number, number][]> = {
   // [oest, sud, est, nord]
   ptIslands: [
@@ -48,6 +61,9 @@ const BOXES: Record<string, [number, number, number, number][]> = {
   es: [
     [-9.6, 35.1, 4.6, 43.9], // península, Balears, Ceuta i Melilla
     [-18.4, 27.5, -13.3, 29.5], // Canàries
+  ],
+  frIslands: [
+    [8.5, 41.3, 9.6, 43.05], // Còrsega
   ],
 }
 
@@ -77,9 +93,7 @@ function pyreneesLat(lng: number) {
 /** País de POSTAL on cau un punt, o undefined si encara no el cobrim. */
 export function detectCountry(p: LngLat): ThemeCode | undefined {
   if (inPolygon(p, PORTUGAL_MAINLAND) || BOXES.ptIslands.some((b) => inBox(p, b))) return 'pt'
-  if (BOXES.es.some((b) => inBox(p, b))) {
-    if (p.lng > -1.8 && p.lat > pyreneesLat(p.lng)) return undefined // França
-    return 'es'
-  }
+  if (BOXES.es.some((b) => inBox(p, b)) && !(p.lng > -1.8 && p.lat > pyreneesLat(p.lng))) return 'es'
+  if (inPolygon(p, FRANCE_MAINLAND) || BOXES.frIslands.some((b) => inBox(p, b))) return 'fr'
   return undefined
 }

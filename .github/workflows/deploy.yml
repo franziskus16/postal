@@ -33,8 +33,7 @@ jobs:
       - name: Generar bústies d'Espanya i Portugal
         if: github.event_name != 'push'
         run: |
-          bash scripts/build-data.sh es
-          bash scripts/build-data.sh pt
+          CLEAN=1 bash scripts/build-all.sh
       - name: Desar les dades al repositori
         if: github.event_name != 'push'
         run: |

@@ -1,13 +1,13 @@
 // Descarrega les bústies d'una ciutat amb l'Overpass API (ràpid, per desenvolupar).
-// S'afegeixen al fitxer del país, així pots anar sumant ciutats.
+// S'afegeixen a les tessel·les del país, així pots anar sumant ciutats.
 // Ús: npm run data:city -- "Barcelona"          (Espanya per defecte)
 //     npm run data:city -- "Lisboa" pt
-import { writeFileSync, mkdirSync, readFileSync, existsSync } from 'node:fs'
+//     npm run data:city -- "Paris" fr
 import { toFeatures, merge } from './slim-geojson.mjs'
+import { readTiles, writeTiles } from './tiles.mjs'
 
 const city = process.argv[2] || 'Barcelona'
 const country = (process.argv[3] || 'es').toLowerCase()
-const OUT = `public/data/busties-${country}.geojson`
 
 const query = `
 [out:json][timeout:120];
@@ -50,8 +50,7 @@ async function fetchOverpass() {
   process.exit(1)
 }
 
-const previous = existsSync(OUT) ? JSON.parse(readFileSync(OUT, 'utf8')).features : []
+const previous = readTiles(country)
 const fc = merge([previous, toFeatures(await fetchOverpass())])
-mkdirSync('public/data', { recursive: true })
-writeFileSync(OUT, JSON.stringify(fc))
-console.log(`${city}: ${fc.features.length - previous.length} bústies noves · ${fc.features.length} en total → ${OUT}`)
+writeTiles(country, fc.features)
+console.log(`${city}: ${fc.features.length - previous.length} bústies noves · ${fc.features.length} en total → public/data/${country}/`)

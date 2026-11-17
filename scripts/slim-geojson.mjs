@@ -25,7 +25,7 @@ export function toFeatures(input) {
       .filter((f) => f.geometry?.type === 'Point')
       .map((f) => {
         const [lng, lat] = f.geometry.coordinates
-        return slimFeature(f.id ?? f.properties?.['@id'], lng, lat, f.properties)
+        return slimFeature(f.id ?? f.properties?.id ?? f.properties?.['@id'], lng, lat, f.properties)
       })
   }
   if (Array.isArray(input.elements)) {
