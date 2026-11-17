@@ -1,4 +1,5 @@
 import type { LngLat } from './geo'
+import { t, type MessageKey } from '../i18n'
 
 /**
  * Rutes a peu i en bici amb els servidors OSRM gratuïts de FOSSGIS
@@ -47,33 +48,35 @@ export async function fetchRoute(from: LngLat, to: LngLat, mode: TravelMode): Pr
   return { coordinates: r.geometry.coordinates, distance: r.distance, duration: r.duration, steps }
 }
 
-const DIR: Record<string, string> = {
-  left: 'a l’esquerra',
-  right: 'a la dreta',
-  'slight left': 'lleugerament a l’esquerra',
-  'slight right': 'lleugerament a la dreta',
-  'sharp left': 'molt a l’esquerra',
-  'sharp right': 'molt a la dreta',
-  straight: 'recte',
-  uturn: 'mitja volta',
+const DIR: Record<string, MessageKey> = {
+  left: 'dirLeft',
+  right: 'dirRight',
+  'slight left': 'dirSlightLeft',
+  'slight right': 'dirSlightRight',
+  'sharp left': 'dirSharpLeft',
+  'sharp right': 'dirSharpRight',
+  straight: 'dirStraight',
+  uturn: 'dirUturn',
 }
 
-function describe(m: { type: string; modifier?: string }, street: string): string {
-  const on = street ? ` per ${street}` : ''
-  const dir = m.modifier ? DIR[m.modifier] ?? '' : ''
+/** Instrucció en l'idioma de l'usuari a partir de la maniobra d'OSRM. */
+export function describe(m: { type: string; modifier?: string }, street: string): string {
+  const dirKey = m.modifier ? DIR[m.modifier] : undefined
+  const dir = dirKey ? t(dirKey) : t('dirStraight')
+  const on = (text: string) => (street ? t('navOn', { text, street }) : text)
   switch (m.type) {
     case 'depart':
-      return `Surt${on}`
+      return on(t('navDepart'))
     case 'arrive':
-      return 'La bústia és al davant'
+      return t('navArrive')
     case 'roundabout':
     case 'rotary':
-      return `A la rotonda, agafa la sortida${on}`
+      return on(t('navRoundabout'))
     case 'continue':
     case 'new name':
-      return `Continua ${dir || 'recte'}${on}`
+      return on(t('navContinue', { dir }))
     default:
-      return m.modifier === 'straight' ? `Segueix recte${on}` : `Gira ${dir}${on}`
+      return on(m.modifier === 'straight' ? t('navStraight') : t('navTurn', { dir }))
   }
 }
 

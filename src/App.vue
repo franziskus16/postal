@@ -9,6 +9,7 @@ import { nearest, formatDistance, directionsUrl, distanceMeters, type PostboxFea
 import { fetchRoute, type Route, type TravelMode } from './lib/routing'
 import { snapToRoute, pointAlong, bearing } from './lib/navigation'
 import { postalStyle } from './map/postalStyle'
+import { t, lang, countryName, postmarkDate, applyDocumentLang } from './i18n'
 import { addPostalIcons } from './map/icons'
 import { THEMES, applyThemeCss, type ThemeCode } from './map/themes'
 
@@ -33,7 +34,8 @@ const map = shallowRef<MLMap>()
 const features = shallowRef<PostboxFeature[]>([])
 const results = ref<{ feature: PostboxFeature; distance: number }[]>([])
 const selected = shallowRef<PostboxFeature>()
-const status = ref('Carregant bústies…')
+applyDocumentLang()
+const status = ref(t('loading'))
 const busy = ref(false)
 const mode = ref<TravelMode>('foot')
 
@@ -69,11 +71,7 @@ const recipient = ref('') // «A qui l'envies?» (opcional, surt escrit a mà al
 const moving = ref(false) // fa gronxar la carta mentre camines
 let lastFix: { at: number; pos: LngLat } | undefined
 let stillTimer: number | undefined
-const MONTHS = ['GEN', 'FEB', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OCT', 'NOV', 'DES']
-const today = (() => {
-  const d = new Date()
-  return `${String(d.getDate()).padStart(2, '0')} ${MONTHS[d.getMonth()]} ${String(d.getFullYear()).slice(2)}`
-})()
+const today = postmarkDate()
 const destinationStreet = computed(() => {
   const steps = route.value?.steps ?? []
   return [...steps].reverse().find((s) => s.street)?.street ?? ''
@@ -145,7 +143,10 @@ onMounted(() => {
     ;(map.value?.getSource('overview') as GeoJSONSource | undefined)?.setData(store.overview())
     loadVisibleTiles()
   })
-  m.on('moveend', loadVisibleTiles)
+  m.on('moveend', () => {
+    loadVisibleTiles()
+    followCountryInView()
+  })
   locateOnStart() // sense esperar: el mapa ja es veu mentre el GPS respon
 })
 
@@ -233,7 +234,13 @@ function addAppLayers() {
     filter: ['!', ['has', 'point_count']],
     layout: {
       // bústies blaves (Correio Azul) amb el seu color; la resta, el del país
-      'icon-image': ['match', ['get', 'colour'], 'blue', 'postal-stamp-blue', 'postal-stamp'],
+      'icon-image': [
+        'match',
+        ['get', 'colour'],
+        'blue',
+        'postal-stamp-blue',
+        ['concat', 'postal-stamp-', ['coalesce', ['get', 'country'], country.value]],
+      ],
       'icon-size': ['interpolate', ['linear'], ['zoom'], 12, 0.7, 17, 1],
       'icon-allow-overlap': true,
       // cada segell lleugerament girat, com enganxats a mà
@@ -251,7 +258,9 @@ function addAppLayers() {
 
 function updateStatus() {
   const total = store.total(country.value)
-  status.value = total ? `${total.toLocaleString('ca')} bústies` : `Encara sense dades · ${countryInfo.value.name}`
+  status.value = total
+    ? t('count', { n: total.toLocaleString(lang.value) })
+    : t('noData', { country: countryName(country.value) })
 }
 
 /** Baixa les tessel·les de la zona visible (només si estàs prou a prop). */
@@ -274,12 +283,20 @@ async function updateNearest(pos: LngLat) {
   results.value = nearest(pos, features.value, 5)
 }
 
+/** El color és el del país que tens al centre del mapa (no durant la navegació). */
+function followCountryInView() {
+  const m = map.value
+  if (!m || phase.value === 'on' || phase.value === 'routing') return
+  const c = m.getCenter()
+  const here = detectCountry({ lng: c.lng, lat: c.lat })
+  if (here) setCountry(here)
+}
+
 /** Canvia de país: el tema (mapa + interfície). Les bústies ja hi són totes. */
 function setCountry(code: ThemeCode, fly = false) {
   if (code === country.value) return
   country.value = code
   applyThemeCss(theme.value)
-  select(undefined)
   map.value?.setStyle(postalStyle(theme.value)) // 'style.load' hi torna a posar les capes
   if (fly) {
     results.value = []
@@ -379,9 +396,9 @@ async function locateMe() {
     await placeUser(pos)
     await nextTick()
     m.flyTo({ center: [pos.lng, pos.lat], zoom: 16, padding: sheetPadding() })
-    if (!results.value.length) status.value = 'Cap bústia a les dades'
+    if (!results.value.length) status.value = t('noneInData')
   } catch {
-    status.value = 'Sense permís d’ubicació'
+    status.value = t('noPermission')
   } finally {
     busy.value = false
   }
@@ -408,9 +425,9 @@ async function startNavigation() {
     keepScreenOn()
 
     if (SIMULATE) simulate()
-    else stopWatch = await watchPosition(onFix, () => (status.value = 'GPS perdut…'))
+    else stopWatch = await watchPosition(onFix, () => (status.value = t('gpsLost')))
   } catch (e) {
-    status.value = e instanceof Error ? e.message : 'No s’ha pogut calcular la ruta'
+    status.value = t('routeError')
     phase.value = 'off'
   }
 }
@@ -554,7 +571,7 @@ function arrowElement() {
     <header v-if="phase !== 'on'" class="brand">
       <h1 class="wordmark">POSTAL</h1>
       <span class="status">{{ status }}</span>
-      <button class="country" :title="`Canvia de país (ara: ${countryInfo.name})`" @click="nextCountry">
+      <button class="country" :title="t('changeCountry', { country: countryName(country) })" @click="nextCountry">
         {{ country.toUpperCase() }}
       </button>
     </header>
@@ -586,11 +603,11 @@ function arrowElement() {
               <span>{{ today }}</span>
             </div>
             <div class="env-address">
-              <span class="env-label">Per a</span>
-              <span class="env-hand">{{ recipient || 'algú especial' }}</span>
-              <span class="env-label">via</span>
+              <span class="env-label">{{ t('envFor') }}</span>
+              <span class="env-hand">{{ recipient || t('envSomeone') }}</span>
+              <span class="env-label">{{ t('envVia') }}</span>
               <span class="env-route">
-                Bústia{{ destinationStreet ? ` · ${destinationStreet}` : '' }}
+                {{ t('postbox') }}{{ destinationStreet ? ` · ${destinationStreet}` : '' }}
               </span>
             </div>
           </div>
@@ -607,10 +624,10 @@ function arrowElement() {
           <div class="nav-summary">
             <span class="denom">{{ formatDistance(remaining) }}</span>
             <span class="meta">
-              <strong>{{ eta }} min {{ mode === 'foot' ? 'a peu' : 'en bici' }}</strong>
-              <small>fins a la bústia</small>
+              <strong>{{ t(mode === 'foot' ? 'minOnFoot' : 'minByBike', { n: eta }) }}</strong>
+              <small>{{ t('toPostbox') }}</small>
             </span>
-            <button class="ghost" @click="stopNavigation">Atura</button>
+            <button class="ghost" @click="stopNavigation">{{ t('stop') }}</button>
           </div>
         </template>
 
@@ -619,40 +636,40 @@ function arrowElement() {
           <div class="arrived">
             <span class="arrived-stamp" aria-hidden="true">✉</span>
             <div>
-              <strong>Carta enviada!</strong>
-              <small>{{ recipient ? `${recipient} ja la té en camí.` : 'Ja és dins la bústia.' }}</small>
+              <strong>{{ t('sent') }}</strong>
+              <small>{{ recipient ? t('sentTo', { name: recipient }) : t('inBox') }}</small>
             </div>
           </div>
-          <button class="primary" @click="stopNavigation(); select()">Fet</button>
+          <button class="primary" @click="stopNavigation(); select()">{{ t('done') }}</button>
         </template>
 
         <!-- Bústia seleccionada -->
         <template v-else-if="selected">
           <div class="card-head">
             <div>
-              <strong>{{ selected.properties.operator || 'Bústia' }}</strong>
-              <small>{{ selected.properties.collection_times || 'Hores de recollida desconegudes' }}</small>
+              <strong>{{ selected.properties.operator || t('postbox') }}</strong>
+              <small>{{ selected.properties.collection_times || t('unknownTimes') }}</small>
             </div>
-            <button class="ghost" aria-label="Tanca" @click="select()">✕</button>
+            <button class="ghost" :aria-label="t('close')" @click="select()">✕</button>
           </div>
-          <div class="modes" role="radiogroup" aria-label="Com hi vas">
+          <div class="modes" role="radiogroup" :aria-label="t('howToGo')">
             <button :class="{ on: mode === 'foot' }" role="radio" :aria-checked="mode === 'foot'" @click="mode = 'foot'">
-              A peu
+              {{ t('onFoot') }}
             </button>
             <button :class="{ on: mode === 'bike' }" role="radio" :aria-checked="mode === 'bike'" @click="mode = 'bike'">
-              En bici
+              {{ t('byBike') }}
             </button>
           </div>
           <label class="to-field">
-            <span>A qui l’envies?</span>
-            <input v-model.trim="recipient" maxlength="40" placeholder="(opcional)" autocomplete="off" />
+            <span>{{ t('toWhom') }}</span>
+            <input v-model.trim="recipient" maxlength="40" :placeholder="t('optional')" autocomplete="off" />
           </label>
           <button class="primary" :disabled="phase === 'routing'" @click="startNavigation">
             <span class="primary-stamp" aria-hidden="true">➤</span>
-            {{ phase === 'routing' ? 'Calculant ruta…' : 'Porta’m-hi' }}
+            {{ phase === 'routing' ? t('routing') : t('takeMe') }}
           </button>
           <a class="gmaps" :href="directionsUrl(lngLatOf(selected), mode)" target="_blank" rel="noopener">
-            Obre a Google Maps ↗
+            {{ t('openGoogle') }}
           </a>
         </template>
 
@@ -660,15 +677,15 @@ function arrowElement() {
         <template v-else>
           <button class="primary" :disabled="busy || !hasData" @click="locateMe">
             <span class="primary-stamp" aria-hidden="true">✉</span>
-            {{ busy ? 'Buscant…' : 'Troba la bústia més propera' }}
+            {{ busy ? t('searching') : t('findNearest') }}
           </button>
           <ol v-if="results.length" class="list">
             <li v-for="(r, i) in results" :key="r.feature.properties.id">
               <button class="item" @click="select(r.feature)">
                 <span class="denom">{{ formatDistance(r.distance) }}</span>
                 <span class="meta">
-                  <strong>{{ i === 0 ? 'La més propera' : r.feature.properties.operator || 'Bústia' }}</strong>
-                  <small>{{ r.feature.properties.collection_times || 'Hores de recollida desconegudes' }}</small>
+                  <strong>{{ i === 0 ? t('nearest') : r.feature.properties.operator || t('postbox') }}</strong>
+                  <small>{{ r.feature.properties.collection_times || t('unknownTimes') }}</small>
                 </span>
                 <span class="go">→</span>
               </button>

@@ -1,5 +1,5 @@
 import type { Map as MLMap } from 'maplibre-gl'
-import { BLUE_BOX, type Theme } from './themes'
+import { BLUE_BOX, THEMES, type Theme } from './themes'
 
 /**
  * Icones del mapa dibuixades amb canvas (sense sprites externs):
@@ -131,6 +131,8 @@ export function addPostalIcons(map: MLMap, P: Theme) {
     if (!map.hasImage(id)) map.addImage(id, img, { pixelRatio: DPR })
   }
   add('postal-stamp', stamp(P, P.primary, P.onPrimary))
+  // cada país amb el color de les seves bústies, sigui quin sigui el tema actiu
+  for (const [code, th] of Object.entries(THEMES)) add(`postal-stamp-${code}`, stamp(P, th.primary, th.onPrimary))
   add('postal-stamp-blue', stamp(P, BLUE_BOX, P.paper))
   add('postal-stamp-selected', stamp(P, P.accent, P.onAccent))
   add('postal-postmark', postmark(P))

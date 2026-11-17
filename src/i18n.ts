@@ -1,0 +1,328 @@
+import { ref } from 'vue'
+
+/**
+ * Idiomes de POSTAL. S'agafa el del navegador o del mòbil (a l'app, Capacitor
+ * passa l'idioma del sistema al navegador intern). Per provar-ne un altre: ?lang=pt
+ */
+export const LANGS = ['ca', 'es', 'pt', 'fr', 'en'] as const
+export type Lang = (typeof LANGS)[number]
+
+const ca = {
+  title: 'POSTAL — troba la bústia més propera',
+  description: 'POSTAL: el mapa de les bústies de correus. Troba la més propera i les hores de recollida.',
+  loading: 'Carregant bústies…',
+  count: '{n} bústies',
+  noData: 'Encara sense dades · {country}',
+  noneInData: 'Cap bústia a prop',
+  noPermission: 'Sense permís d’ubicació',
+  gpsLost: 'GPS perdut…',
+  routeError: 'No s’ha pogut calcular la ruta',
+  changeCountry: 'Canvia de país (ara: {country})',
+  findNearest: 'Troba la bústia més propera',
+  searching: 'Buscant…',
+  nearest: 'La més propera',
+  postbox: 'Bústia',
+  unknownTimes: 'Hores de recollida desconegudes',
+  close: 'Tanca',
+  howToGo: 'Com hi vas',
+  onFoot: 'A peu',
+  byBike: 'En bici',
+  toWhom: 'A qui l’envies?',
+  optional: '(opcional)',
+  takeMe: 'Porta’m-hi',
+  routing: 'Calculant ruta…',
+  openGoogle: 'Obre a Google Maps ↗',
+  minOnFoot: '{n} min a peu',
+  minByBike: '{n} min en bici',
+  toPostbox: 'fins a la bústia',
+  stop: 'Atura',
+  sent: 'Carta enviada!',
+  sentTo: '{name} ja la té en camí.',
+  inBox: 'Ja és dins la bústia.',
+  done: 'Fet',
+  envFor: 'Per a',
+  envVia: 'via',
+  envSomeone: 'algú especial',
+  // navegació pas a pas
+  navDepart: 'Surt',
+  navArrive: 'La bústia és al davant',
+  navRoundabout: 'A la rotonda, agafa la sortida',
+  navContinue: 'Continua {dir}',
+  navStraight: 'Segueix recte',
+  navTurn: 'Gira {dir}',
+  navOn: '{text} per {street}',
+  dirLeft: 'a l’esquerra',
+  dirRight: 'a la dreta',
+  dirSlightLeft: 'lleugerament a l’esquerra',
+  dirSlightRight: 'lleugerament a la dreta',
+  dirSharpLeft: 'molt a l’esquerra',
+  dirSharpRight: 'molt a la dreta',
+  dirStraight: 'recte',
+  dirUturn: 'mitja volta',
+}
+type Messages = typeof ca
+
+const es: Messages = {
+  title: 'POSTAL — encuentra el buzón más cercano',
+  description: 'POSTAL: el mapa de los buzones de correos. Encuentra el más cercano y sus horas de recogida.',
+  loading: 'Cargando buzones…',
+  count: '{n} buzones',
+  noData: 'Aún sin datos · {country}',
+  noneInData: 'Ningún buzón cerca',
+  noPermission: 'Sin permiso de ubicación',
+  gpsLost: 'GPS perdido…',
+  routeError: 'No se ha podido calcular la ruta',
+  changeCountry: 'Cambiar de país (ahora: {country})',
+  findNearest: 'Encuentra el buzón más cercano',
+  searching: 'Buscando…',
+  nearest: 'El más cercano',
+  postbox: 'Buzón',
+  unknownTimes: 'Horas de recogida desconocidas',
+  close: 'Cerrar',
+  howToGo: 'Cómo vas',
+  onFoot: 'A pie',
+  byBike: 'En bici',
+  toWhom: '¿A quién se la envías?',
+  optional: '(opcional)',
+  takeMe: 'Llévame',
+  routing: 'Calculando ruta…',
+  openGoogle: 'Abrir en Google Maps ↗',
+  minOnFoot: '{n} min a pie',
+  minByBike: '{n} min en bici',
+  toPostbox: 'hasta el buzón',
+  stop: 'Parar',
+  sent: '¡Carta enviada!',
+  sentTo: '{name} ya la tiene en camino.',
+  inBox: 'Ya está dentro del buzón.',
+  done: 'Hecho',
+  envFor: 'Para',
+  envVia: 'vía',
+  envSomeone: 'alguien especial',
+  navDepart: 'Sal',
+  navArrive: 'El buzón está delante',
+  navRoundabout: 'En la rotonda, toma la salida',
+  navContinue: 'Continúa {dir}',
+  navStraight: 'Sigue recto',
+  navTurn: 'Gira {dir}',
+  navOn: '{text} por {street}',
+  dirLeft: 'a la izquierda',
+  dirRight: 'a la derecha',
+  dirSlightLeft: 'ligeramente a la izquierda',
+  dirSlightRight: 'ligeramente a la derecha',
+  dirSharpLeft: 'muy a la izquierda',
+  dirSharpRight: 'muy a la derecha',
+  dirStraight: 'recto',
+  dirUturn: 'media vuelta',
+}
+
+const pt: Messages = {
+  title: 'POSTAL — encontra o marco do correio mais próximo',
+  description: 'POSTAL: o mapa dos marcos do correio. Encontra o mais próximo e as horas de recolha.',
+  loading: 'A carregar marcos do correio…',
+  count: '{n} marcos do correio',
+  noData: 'Ainda sem dados · {country}',
+  noneInData: 'Nenhum marco por perto',
+  noPermission: 'Sem permissão de localização',
+  gpsLost: 'GPS perdido…',
+  routeError: 'Não foi possível calcular o percurso',
+  changeCountry: 'Mudar de país (agora: {country})',
+  findNearest: 'Encontra o marco mais próximo',
+  searching: 'A procurar…',
+  nearest: 'O mais próximo',
+  postbox: 'Marco do correio',
+  unknownTimes: 'Horas de recolha desconhecidas',
+  close: 'Fechar',
+  howToGo: 'Como vais',
+  onFoot: 'A pé',
+  byBike: 'De bicicleta',
+  toWhom: 'Para quem é a carta?',
+  optional: '(opcional)',
+  takeMe: 'Leva-me lá',
+  routing: 'A calcular o percurso…',
+  openGoogle: 'Abrir no Google Maps ↗',
+  minOnFoot: '{n} min a pé',
+  minByBike: '{n} min de bicicleta',
+  toPostbox: 'até ao marco',
+  stop: 'Parar',
+  sent: 'Carta enviada!',
+  sentTo: '{name} já a tem a caminho.',
+  inBox: 'Já está no marco do correio.',
+  done: 'Feito',
+  envFor: 'Para',
+  envVia: 'via',
+  envSomeone: 'alguém especial',
+  navDepart: 'Sai',
+  navArrive: 'O marco está à tua frente',
+  navRoundabout: 'Na rotunda, apanha a saída',
+  navContinue: 'Continua {dir}',
+  navStraight: 'Segue em frente',
+  navTurn: 'Vira {dir}',
+  navOn: '{text} pela {street}',
+  dirLeft: 'à esquerda',
+  dirRight: 'à direita',
+  dirSlightLeft: 'ligeiramente à esquerda',
+  dirSlightRight: 'ligeiramente à direita',
+  dirSharpLeft: 'bem à esquerda',
+  dirSharpRight: 'bem à direita',
+  dirStraight: 'em frente',
+  dirUturn: 'inversão de marcha',
+}
+
+const fr: Messages = {
+  title: 'POSTAL — trouve la boîte aux lettres la plus proche',
+  description: 'POSTAL : la carte des boîtes aux lettres. Trouve la plus proche et ses heures de levée.',
+  loading: 'Chargement des boîtes aux lettres…',
+  count: '{n} boîtes aux lettres',
+  noData: 'Pas encore de données · {country}',
+  noneInData: 'Aucune boîte à proximité',
+  noPermission: 'Pas d’accès à la localisation',
+  gpsLost: 'GPS perdu…',
+  routeError: 'Impossible de calculer l’itinéraire',
+  changeCountry: 'Changer de pays (actuel : {country})',
+  findNearest: 'Trouve la boîte la plus proche',
+  searching: 'Recherche…',
+  nearest: 'La plus proche',
+  postbox: 'Boîte aux lettres',
+  unknownTimes: 'Heures de levée inconnues',
+  close: 'Fermer',
+  howToGo: 'Comment y aller',
+  onFoot: 'À pied',
+  byBike: 'À vélo',
+  toWhom: 'À qui l’envoies-tu ?',
+  optional: '(facultatif)',
+  takeMe: 'Emmène-moi',
+  routing: 'Calcul de l’itinéraire…',
+  openGoogle: 'Ouvrir dans Google Maps ↗',
+  minOnFoot: '{n} min à pied',
+  minByBike: '{n} min à vélo',
+  toPostbox: 'jusqu’à la boîte',
+  stop: 'Arrêter',
+  sent: 'Lettre envoyée !',
+  sentTo: '{name} la recevra bientôt.',
+  inBox: 'Elle est dans la boîte.',
+  done: 'Terminé',
+  envFor: 'Pour',
+  envVia: 'via',
+  envSomeone: 'quelqu’un de spécial',
+  navDepart: 'Pars',
+  navArrive: 'La boîte est devant toi',
+  navRoundabout: 'Au rond-point, prends la sortie',
+  navContinue: 'Continue {dir}',
+  navStraight: 'Continue tout droit',
+  navTurn: 'Tourne {dir}',
+  navOn: '{text} sur {street}',
+  dirLeft: 'à gauche',
+  dirRight: 'à droite',
+  dirSlightLeft: 'légèrement à gauche',
+  dirSlightRight: 'légèrement à droite',
+  dirSharpLeft: 'franchement à gauche',
+  dirSharpRight: 'franchement à droite',
+  dirStraight: 'tout droit',
+  dirUturn: 'demi-tour',
+}
+
+const en: Messages = {
+  title: 'POSTAL — find the nearest postbox',
+  description: 'POSTAL: the map of postboxes. Find the nearest one and its collection times.',
+  loading: 'Loading postboxes…',
+  count: '{n} postboxes',
+  noData: 'No data yet · {country}',
+  noneInData: 'No postboxes nearby',
+  noPermission: 'No location permission',
+  gpsLost: 'GPS lost…',
+  routeError: 'Couldn’t calculate the route',
+  changeCountry: 'Change country (now: {country})',
+  findNearest: 'Find the nearest postbox',
+  searching: 'Searching…',
+  nearest: 'Nearest',
+  postbox: 'Postbox',
+  unknownTimes: 'Collection times unknown',
+  close: 'Close',
+  howToGo: 'How are you going',
+  onFoot: 'On foot',
+  byBike: 'By bike',
+  toWhom: 'Who is it for?',
+  optional: '(optional)',
+  takeMe: 'Take me there',
+  routing: 'Calculating route…',
+  openGoogle: 'Open in Google Maps ↗',
+  minOnFoot: '{n} min on foot',
+  minByBike: '{n} min by bike',
+  toPostbox: 'to the postbox',
+  stop: 'Stop',
+  sent: 'Letter sent!',
+  sentTo: 'It’s on its way to {name}.',
+  inBox: 'It’s in the postbox.',
+  done: 'Done',
+  envFor: 'To',
+  envVia: 'via',
+  envSomeone: 'someone special',
+  navDepart: 'Head off',
+  navArrive: 'The postbox is ahead',
+  navRoundabout: 'At the roundabout, take the exit',
+  navContinue: 'Continue {dir}',
+  navStraight: 'Go straight on',
+  navTurn: 'Turn {dir}',
+  navOn: '{text} onto {street}',
+  dirLeft: 'left',
+  dirRight: 'right',
+  dirSlightLeft: 'slightly left',
+  dirSlightRight: 'slightly right',
+  dirSharpLeft: 'sharp left',
+  dirSharpRight: 'sharp right',
+  dirStraight: 'straight',
+  dirUturn: 'a U-turn',
+}
+
+const MESSAGES: Record<Lang, Messages> = { ca, es, pt, fr, en }
+
+/** Noms dels països en cada idioma. */
+export const COUNTRY_NAMES: Record<Lang, Record<string, string>> = {
+  ca: { es: 'Espanya', pt: 'Portugal', fr: 'França' },
+  es: { es: 'España', pt: 'Portugal', fr: 'Francia' },
+  pt: { es: 'Espanha', pt: 'Portugal', fr: 'França' },
+  fr: { es: 'Espagne', pt: 'Portugal', fr: 'France' },
+  en: { es: 'Spain', pt: 'Portugal', fr: 'France' },
+}
+
+/** Idioma preferit: ?lang=xx, després els idiomes del navegador/mòbil, i si no, anglès. */
+export function detectLang(
+  search = typeof location !== 'undefined' ? location.search : '',
+  preferred: readonly string[] = typeof navigator !== 'undefined' ? navigator.languages ?? [navigator.language] : [],
+): Lang {
+  const forced = new URLSearchParams(search).get('lang')
+  for (const tag of [forced, ...preferred]) {
+    const base = tag?.toLowerCase().split('-')[0]
+    // el gallec i el valencià s'entenen millor en castellà i català respectivament
+    const mapped = base === 'gl' ? 'es' : base === 'va' ? 'ca' : base
+    if (mapped && (LANGS as readonly string[]).includes(mapped)) return mapped as Lang
+  }
+  return 'en'
+}
+
+export const lang = ref<Lang>(detectLang())
+
+export type MessageKey = keyof Messages
+
+/** Text traduït, amb {variables}. */
+export function t(key: MessageKey, vars: Record<string, string | number> = {}): string {
+  const text = MESSAGES[lang.value][key] ?? MESSAGES.en[key]
+  return text.replace(/\{(\w+)\}/g, (_, k) => String(vars[k] ?? ''))
+}
+
+export function countryName(code: string) {
+  return COUNTRY_NAMES[lang.value][code] ?? code.toUpperCase()
+}
+
+/** Data curta per al mata-segells, en l'idioma actual (p. ex. «17 NOV 26»). */
+export function postmarkDate(d = new Date()) {
+  const month = d.toLocaleDateString(lang.value, { month: 'short' }).replace('.', '').toUpperCase()
+  return `${String(d.getDate()).padStart(2, '0')} ${month} ${String(d.getFullYear()).slice(2)}`
+}
+
+/** Títol, descripció i atribut lang del document. */
+export function applyDocumentLang() {
+  document.documentElement.lang = lang.value
+  document.title = t('title')
+  document.querySelector('meta[name="description"]')?.setAttribute('content', t('description'))
+}

@@ -10,6 +10,7 @@ export interface PostboxProps {
   collection_times?: string
   note?: string
   colour?: string
+  country?: string
 }
 
 export interface PostboxFeature {

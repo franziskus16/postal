@@ -4,7 +4,7 @@ import type { ThemeCode } from '../map/themes'
 export interface Country {
   code: ThemeCode
   name: string // en català, per a la interfície
-  postmark: string // el que surt al mata-segells del sobre
+  postmark: string // el que surt al mata-segells del sobre (en l'idioma del país)
   center: [number, number]
   zoom: number
 }
@@ -13,7 +13,7 @@ export const COUNTRIES: Record<ThemeCode, Country> = {
   es: {
     code: 'es',
     name: 'Espanya',
-    postmark: 'ESPANYA',
+    postmark: 'ESPAÑA',
     center: [-3.7, 40.2],
     zoom: 5,
   },

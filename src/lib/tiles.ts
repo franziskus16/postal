@@ -90,7 +90,12 @@ export class PostboxStore {
     let p = this.pending.get(id)
     if (!p) {
       p = loadJson<PostboxCollection>(`${id}.json`)
-        .then((fc) => void this.loaded.set(id, fc.features))
+        .then((fc) => {
+          // cada bústia sap de quin país és (per pintar-la amb el seu color)
+          const country = id.split('/')[0]
+          for (const f of fc.features) f.properties.country = country
+          this.loaded.set(id, fc.features)
+        })
         .catch(() => void this.loaded.set(id, [])) // si falla, no ho reintentem a cada moviment
       this.pending.set(id, p)
     }

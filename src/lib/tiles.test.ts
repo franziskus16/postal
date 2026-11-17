@@ -18,9 +18,10 @@ describe('tessel·les', () => {
 
   it('carrega només la zona i troba bústies a Barcelona', async () => {
     const store = new PostboxStore()
-    await store.loadIndexes(['es', 'pt', 'fr'])
+    await store.loadIndexes(['es', 'pt', 'fr', 'xx'])
     expect(store.total('es')).toBeGreaterThan(1000)
-    expect(store.total('fr')).toBe(0) // encara sense dades
+    expect(store.total('fr')).toBeGreaterThan(10000)
+    expect(store.total('xx')).toBe(0) // país sense dades
     expect(store.features()).toHaveLength(0)
     expect(await store.ensureAround({ lng: 2.164, lat: 41.386 })).toBe(true)
     const n = store.features().length
