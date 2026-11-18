@@ -8,6 +8,7 @@
  */
 import type { Week } from './hours'
 import type { ThemeCode } from '../map/themes'
+import { Capacitor } from '@capacitor/core'
 
 export type Dest = 'national' | 'europe' | 'world'
 export type MailKind = 'letter' | 'postcard'
@@ -100,23 +101,74 @@ function startOfDay(ms: number) {
 }
 
 // ── Desar al dispositiu ──────────────────────────
+// Web: localStorage (i demanem al navegador que no l'esborri).
+// App nativa: també a Preferences (UserDefaults / SharedPreferences), que el sistema
+// no esborra mai tret que s'esborri l'app. localStorage queda com a còpia ràpida.
 const KEY = 'postal:sent'
 
-export function loadSent(): SentItem[] {
+const parse = (raw: string | null | undefined): SentItem[] => {
   try {
-    const list = JSON.parse(localStorage.getItem(KEY) ?? '[]')
+    const list = JSON.parse(raw ?? '[]')
     return Array.isArray(list) ? list : []
   } catch {
     return []
   }
 }
 
-export function saveSent(list: SentItem[]) {
+/** Lectura immediata (localStorage). */
+export function loadSent(): SentItem[] {
   try {
-    localStorage.setItem(KEY, JSON.stringify(list))
+    return parse(localStorage.getItem(KEY))
+  } catch {
+    return []
+  }
+}
+
+const isNative = () => Capacitor.isNativePlatform()
+
+/** A l'app nativa, la còpia bona és la de Preferences: la recuperem si localStorage s'ha buidat. */
+export async function loadSentDurable(): Promise<SentItem[] | undefined> {
+  try {
+    if (!isNative()) return undefined
+    const { Preferences } = await import('@capacitor/preferences')
+    const { value } = await Preferences.get({ key: KEY })
+    return value == null ? undefined : parse(value)
+  } catch {
+    return undefined
+  }
+}
+
+export function saveSent(list: SentItem[]) {
+  const raw = JSON.stringify(list)
+  try {
+    localStorage.setItem(KEY, raw)
   } catch {
     /* sense emmagatzematge (navegació privada): es perd en tancar */
   }
+  void (async () => {
+    try {
+      if (isNative()) {
+        const { Preferences } = await import('@capacitor/preferences')
+        await Preferences.set({ key: KEY, value: raw })
+      } else {
+        // demana que el navegador no esborri les dades quan li falti espai (Chrome, Firefox, Android)
+        await navigator.storage?.persist?.()
+      }
+    } catch {
+      /* no és greu: queda a localStorage */
+    }
+  })()
+}
+
+/**
+ * Safari a l'iPhone/iPad esborra les dades d'una web que no visites en 7 dies,
+ * tret que estigui afegida a la pantalla d'inici.
+ */
+export function iosWebNeedsHomeScreen(): boolean {
+  if (typeof navigator === 'undefined') return false
+  const ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+  const standalone = (navigator as { standalone?: boolean }).standalone === true || matchMedia?.('(display-mode: standalone)').matches
+  return ios && !standalone && !isNative()
 }
 
 export const newId = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`

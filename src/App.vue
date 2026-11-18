@@ -14,7 +14,7 @@ import { placeTitle, placeStatus, placeWeek, kindLabel, isShop } from './lib/pla
 import { t, lang, countryName, postmarkDate, applyDocumentLang } from './i18n'
 import { ABOUT } from './about'
 import { parseHours } from './lib/hours'
-import { departure, loadSent, saveSent, newId, type SentItem, type MailKind, type Dest } from './lib/sent'
+import { departure, loadSent, loadSentDurable, saveSent, newId, iosWebNeedsHomeScreen, type SentItem, type MailKind, type Dest } from './lib/sent'
 import { fmtWhen, fmtDay, sentStatusText, postmarkOf } from './lib/sentText'
 import { arrivalWindow } from './lib/sent'
 
@@ -119,6 +119,14 @@ const recipient = ref('') // «A qui l'envies?» (opcional, surt escrit a mà al
 // Enviades: cartes i postals deixades a la bústia (només al dispositiu)
 const sent = ref<SentItem[]>(loadSent())
 const showSent = ref(false)
+// a l'app nativa, si el WebView ha perdut localStorage, recuperem la còpia del sistema
+loadSentDurable().then((list) => {
+  if (list && list.length !== sent.value.length) {
+    sent.value = list
+    saveSent(list)
+  }
+})
+const homeScreenTip = iosWebNeedsHomeScreen()
 const postKind = ref<MailKind>('letter')
 const postDest = ref<Dest>('national')
 const justPosted = ref<SentItem>()
@@ -1003,6 +1011,7 @@ function arrowElement() {
                 </div>
               </li>
             </ol>
+            <p v-if="sent.length && homeScreenTip" class="sent-tip">{{ t('homeScreenTip') }}</p>
           </template>
           <template v-else>
           <button class="primary" :disabled="busy || !hasData" @click="locateMe">
@@ -1302,6 +1311,7 @@ button.gmaps { width: 100%; background: none; border: 0; padding: 0; cursor: poi
 .posted-info { display: flex; flex-direction: column; gap: 4px; margin: 0 0 14px; font-family: var(--font-mono); font-size: 12px; color: var(--ink); }
 .posted-info strong { font-family: var(--font-display); font-size: 16px; }
 .posted-info small { color: var(--ink-soft); font-size: 10.5px; }
+.sent-tip { margin: 8px 0 0; padding: 8px 10px; border: 1.5px dashed var(--ink-soft); font-family: var(--font-mono); font-size: 11px; line-height: 1.5; color: var(--ink); }
 .sent-empty { font-family: var(--font-mono); font-size: 12px; line-height: 1.6; color: var(--ink-soft); margin: 4px 0 0; }
 .sent-item .item { padding-bottom: 4px; }
 .postmark {
