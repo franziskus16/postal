@@ -9,21 +9,26 @@
     "preview": "vite preview",
     "test": "vitest run",
     "data:city": "node scripts/fetch-city-overpass.mjs",
-    "cap:sync": "VITE_DATA_BASE=https://franziskus16.github.io/postal/data/ npm run build && npx cap sync",
+    "cap:sync": "VITE_DATA_BASE=https://francescgimenez.com/postal/data/ npm run build && npx cap sync && node scripts/native-setup.mjs",
     "data:spain": "bash scripts/build-data.sh es",
     "data:portugal": "bash scripts/build-data.sh pt",
     "data:all": "bash scripts/build-all.sh",
     "data:france": "bash scripts/build-data.sh fr",
-    "data:italy": "bash scripts/build-data.sh it"
+    "data:italy": "bash scripts/build-data.sh it",
+    "native:assets": "capacitor-assets generate --iconBackgroundColor '#2C4BA0' --iconBackgroundColorDark '#2C4BA0' --splashBackgroundColor '#F7F2E6' --splashBackgroundColorDark '#1A2550'"
   },
   "dependencies": {
     "@capacitor/core": "^7.0.0",
     "@capacitor/geolocation": "^7.0.0",
+    "@fontsource/bricolage-grotesque": "^5.3.0",
+    "@fontsource/caveat": "^5.3.0",
+    "@fontsource/ibm-plex-mono": "^5.3.0",
     "maplibre-gl": "^6.18.0",
     "vue": "^3.5.0"
   },
   "devDependencies": {
     "@capacitor/android": "^7.0.0",
+    "@capacitor/assets": "^4.0.0",
     "@capacitor/cli": "^7.0.0",
     "@capacitor/ios": "^7.0.0",
     "@types/geojson": "^7946.0.16",

@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="ca">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#F7F2E6" />
+    <title>POSTAL — Privacitat · Privacidad · Privacy</title>
+    <style>
+      :root {
+        --paper: #f7f2e6;
+        --ink: #2c4ba0;
+        --ink-soft: #56607a;
+        --yellow: #ffd93b;
+        --red: #f15060;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: var(--paper);
+        color: #1f2a44;
+        font: 16px/1.6 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+      }
+      .stripes {
+        height: 8px;
+        background: repeating-linear-gradient(-45deg, var(--red) 0 25%, var(--paper) 25% 50%, var(--ink) 50% 75%, var(--paper) 75% 100%);
+        background-size: 32px 8px;
+      }
+      main { max-width: 680px; margin: 0 auto; padding: 28px 20px 60px; }
+      h1 {
+        margin: 0 0 4px;
+        font-size: 34px;
+        letter-spacing: 0.08em;
+        color: var(--ink);
+        text-shadow: 2px 1.5px 0 var(--yellow);
+      }
+      h2 { color: var(--ink); font-size: 20px; margin: 28px 0 6px; }
+      .updated { color: var(--ink-soft); font-size: 14px; margin: 0 0 18px; }
+      nav { display: flex; flex-wrap: wrap; gap: 6px; margin: 16px 0 8px; }
+      nav button {
+        border: 1.5px solid var(--ink);
+        background: var(--paper);
+        color: var(--ink);
+        padding: 4px 10px;
+        font: 600 13px ui-monospace, Menlo, monospace;
+        cursor: pointer;
+      }
+      nav button[aria-pressed='true'] { background: var(--ink); color: var(--paper); }
+      section[lang] { display: none; }
+      section[lang].on { display: block; }
+      ul { padding-left: 1.2em; }
+      li { margin: 6px 0; }
+      a { color: var(--ink); }
+      .box {
+        border: 1.5px solid var(--ink);
+        box-shadow: 4px 4px 0 var(--yellow);
+        padding: 10px 14px;
+        background: #fffdf7;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="stripes"></div>
+    <main>
+      <h1>POSTAL</h1>
+      <nav aria-label="Language">
+        <button data-l="ca">CA</button><button data-l="es">ES</button><button data-l="pt">PT</button>
+        <button data-l="fr">FR</button><button data-l="it">IT</button><button data-l="en">EN</button>
+      </nav>
+
+      <section lang="ca">
+        <h2>Política de privacitat</h2>
+        <p class="updated">Última actualització: 18 de novembre de 2026</p>
+        <p class="box">POSTAL no té comptes d’usuari, ni publicitat, ni galetes de seguiment, ni estadístiques d’ús. No venem ni compartim dades personals.</p>
+        <h2>La teva ubicació</h2>
+        <ul>
+          <li>POSTAL et demana la ubicació per centrar el mapa on ets, trobar les bústies i els llocs de segells més propers i guiar-t’hi. Pots fer servir l’app sense donar-la.</li>
+          <li>La ubicació es fa servir al teu dispositiu. Hi guardem l’última posició aproximada perquè la propera vegada l’app s’obri a la teva zona. Pots esborrar-la esborrant les dades de l’app.</li>
+          <li>Quan prems «Porta’m-hi», el punt de sortida i el de destinació s’envien al servei de rutes de <a href="https://routing.openstreetmap.de">FOSSGIS (routing.openstreetmap.de)</a> per calcular el camí.</li>
+        </ul>
+        <h2>Serveis externs</h2>
+        <ul>
+          <li>El mapa de fons es carrega d’<a href="https://openfreemap.org">OpenFreeMap</a>, que rep la teva adreça IP i la zona del mapa que mires, com qualsevol servidor web.</li>
+          <li>Les dades de bústies i botigues (© col·laboradors d’<a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>) es baixen de la web de POSTAL, allotjada a GitHub Pages.</li>
+          <li>Si obres una ruta a Google Maps o la web d’un operador postal, s’aplica la política de privacitat d’aquell servei.</li>
+        </ul>
+        <h2>El nom del destinatari</h2>
+        <p>El nom que escrius al sobre només es mostra a la pantalla: no es guarda ni s’envia enlloc.</p>
+        <h2>Contacte</h2>
+        <p>Per a qualsevol dubte: <a href="https://github.com/franziskus16/postal/issues">github.com/franziskus16/postal/issues</a>.</p>
+      </section>
+
+      <section lang="es">
+        <h2>Política de privacidad</h2>
+        <p class="updated">Última actualización: 18 de noviembre de 2026</p>
+        <p class="box">POSTAL no tiene cuentas de usuario, ni publicidad, ni cookies de seguimiento, ni estadísticas de uso. No vendemos ni compartimos datos personales.</p>
+        <h2>Tu ubicación</h2>
+        <ul>
+          <li>POSTAL te pide la ubicación para centrar el mapa donde estás, encontrar los buzones y los sitios de sellos más cercanos y guiarte hasta ellos. Puedes usar la app sin darla.</li>
+          <li>La ubicación se usa en tu dispositivo. Guardamos ahí la última posición aproximada para que la próxima vez la app se abra en tu zona. Puedes borrarla borrando los datos de la app.</li>
+          <li>Cuando pulsas «Llévame», el punto de salida y el de destino se envían al servicio de rutas de <a href="https://routing.openstreetmap.de">FOSSGIS (routing.openstreetmap.de)</a> para calcular el camino.</li>
+        </ul>
+        <h2>Servicios externos</h2>
+        <ul>
+          <li>El mapa de fondo se carga de <a href="https://openfreemap.org">OpenFreeMap</a>, que recibe tu dirección IP y la zona del mapa que miras, como cualquier servidor web.</li>
+          <li>Los datos de buzones y tiendas (© colaboradores de <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>) se descargan de la web de POSTAL, alojada en GitHub Pages.</li>
+          <li>Si abres una ruta en Google Maps o la web de un operador postal, se aplica la política de privacidad de ese servicio.</li>
+        </ul>
+        <h2>El nombre del destinatario</h2>
+        <p>El nombre que escribes en el sobre solo se muestra en pantalla: no se guarda ni se envía a ningún sitio.</p>
+        <h2>Contacto</h2>
+        <p>Para cualquier duda: <a href="https://github.com/franziskus16/postal/issues">github.com/franziskus16/postal/issues</a>.</p>
+      </section>
+
+      <section lang="pt">
+        <h2>Política de privacidade</h2>
+        <p class="updated">Última atualização: 18 de novembro de 2026</p>
+        <p class="box">O POSTAL não tem contas de utilizador, nem publicidade, nem cookies de rastreio, nem estatísticas de utilização. Não vendemos nem partilhamos dados pessoais.</p>
+        <h2>A tua localização</h2>
+        <ul>
+          <li>O POSTAL pede a tua localização para centrar o mapa onde estás, encontrar os marcos do correio e os locais de selos mais próximos e guiar-te até lá. Podes usar a app sem a dar.</li>
+          <li>A localização é usada no teu dispositivo. Guardamos aí a última posição aproximada para que, da próxima vez, a app abra na tua zona. Podes apagá-la apagando os dados da app.</li>
+          <li>Quando carregas em «Leva-me lá», o ponto de partida e o de destino são enviados ao serviço de percursos da <a href="https://routing.openstreetmap.de">FOSSGIS (routing.openstreetmap.de)</a> para calcular o caminho.</li>
+        </ul>
+        <h2>Serviços externos</h2>
+        <ul>
+          <li>O mapa de fundo é carregado do <a href="https://openfreemap.org">OpenFreeMap</a>, que recebe o teu endereço IP e a zona do mapa que estás a ver, como qualquer servidor web.</li>
+          <li>Os dados dos marcos e das lojas (© contribuidores do <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>) são descarregados do site do POSTAL, alojado no GitHub Pages.</li>
+          <li>Se abrires um percurso no Google Maps ou o site de um operador postal, aplica-se a política de privacidade desse serviço.</li>
+        </ul>
+        <h2>O nome do destinatário</h2>
+        <p>O nome que escreves no envelope só aparece no ecrã: não é guardado nem enviado para lado nenhum.</p>
+        <h2>Contacto</h2>
+        <p>Para qualquer dúvida: <a href="https://github.com/franziskus16/postal/issues">github.com/franziskus16/postal/issues</a>.</p>
+      </section>
+
+      <section lang="fr">
+        <h2>Politique de confidentialité</h2>
+        <p class="updated">Dernière mise à jour : 18 novembre 2026</p>
+        <p class="box">POSTAL n’a ni comptes utilisateur, ni publicité, ni cookies de suivi, ni statistiques d’utilisation. Nous ne vendons ni ne partageons aucune donnée personnelle.</p>
+        <h2>Ta position</h2>
+        <ul>
+          <li>POSTAL te demande ta position pour centrer la carte là où tu es, trouver les boîtes aux lettres et les points de vente de timbres les plus proches et t’y guider. Tu peux utiliser l’app sans la donner.</li>
+          <li>La position est utilisée sur ton appareil. Nous y gardons ta dernière position approximative pour que l’app s’ouvre dans ta zone la prochaine fois. Tu peux l’effacer en effaçant les données de l’app.</li>
+          <li>Quand tu appuies sur « Emmène-moi », le point de départ et la destination sont envoyés au service d’itinéraires de <a href="https://routing.openstreetmap.de">FOSSGIS (routing.openstreetmap.de)</a> pour calculer le trajet.</li>
+        </ul>
+        <h2>Services externes</h2>
+        <ul>
+          <li>Le fond de carte est chargé depuis <a href="https://openfreemap.org">OpenFreeMap</a>, qui reçoit ton adresse IP et la zone affichée, comme tout serveur web.</li>
+          <li>Les données des boîtes et des points de vente (© contributeurs <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>) sont téléchargées depuis le site de POSTAL, hébergé sur GitHub Pages.</li>
+          <li>Si tu ouvres un itinéraire dans Google Maps ou le site d’un opérateur postal, la politique de confidentialité de ce service s’applique.</li>
+        </ul>
+        <h2>Le nom du destinataire</h2>
+        <p>Le nom que tu écris sur l’enveloppe s’affiche seulement à l’écran : il n’est ni enregistré ni envoyé.</p>
+        <h2>Contact</h2>
+        <p>Pour toute question : <a href="https://github.com/franziskus16/postal/issues">github.com/franziskus16/postal/issues</a>.</p>
+      </section>
+
+      <section lang="it">
+        <h2>Informativa sulla privacy</h2>
+        <p class="updated">Ultimo aggiornamento: 18 novembre 2026</p>
+        <p class="box">POSTAL non ha account utente, né pubblicità, né cookie di tracciamento, né statistiche di utilizzo. Non vendiamo né condividiamo dati personali.</p>
+        <h2>La tua posizione</h2>
+        <ul>
+          <li>POSTAL ti chiede la posizione per centrare la mappa dove sei, trovare le cassette postali e i punti vendita di francobolli più vicini e guidarti fin lì. Puoi usare l’app anche senza concederla.</li>
+          <li>La posizione viene usata sul tuo dispositivo. Lì salviamo l’ultima posizione approssimativa, così la prossima volta l’app si apre nella tua zona. Puoi cancellarla cancellando i dati dell’app.</li>
+          <li>Quando premi «Portami lì», il punto di partenza e quello di arrivo vengono inviati al servizio di percorsi di <a href="https://routing.openstreetmap.de">FOSSGIS (routing.openstreetmap.de)</a> per calcolare il percorso.</li>
+        </ul>
+        <h2>Servizi esterni</h2>
+        <ul>
+          <li>La mappa di base viene caricata da <a href="https://openfreemap.org">OpenFreeMap</a>, che riceve il tuo indirizzo IP e la zona della mappa che guardi, come qualsiasi server web.</li>
+          <li>I dati di cassette e negozi (© contributori di <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>) vengono scaricati dal sito di POSTAL, ospitato su GitHub Pages.</li>
+          <li>Se apri un percorso in Google Maps o il sito di un operatore postale, si applica l’informativa sulla privacy di quel servizio.</li>
+        </ul>
+        <h2>Il nome del destinatario</h2>
+        <p>Il nome che scrivi sulla busta compare solo sullo schermo: non viene salvato né inviato da nessuna parte.</p>
+        <h2>Contatti</h2>
+        <p>Per qualsiasi domanda: <a href="https://github.com/franziskus16/postal/issues">github.com/franziskus16/postal/issues</a>.</p>
+      </section>
+
+      <section lang="en">
+        <h2>Privacy policy</h2>
+        <p class="updated">Last updated: 18 November 2026</p>
+        <p class="box">POSTAL has no user accounts, no ads, no tracking cookies and no usage analytics. We don’t sell or share any personal data.</p>
+        <h2>Your location</h2>
+        <ul>
+          <li>POSTAL asks for your location to centre the map on you, find the nearest postboxes and places to buy stamps, and guide you there. You can use the app without granting it.</li>
+          <li>Your location is used on your device. We store your last approximate position there so the app opens in your area next time. You can remove it by clearing the app’s data.</li>
+          <li>When you tap “Take me there”, the start and destination points are sent to the <a href="https://routing.openstreetmap.de">FOSSGIS routing service (routing.openstreetmap.de)</a> to calculate the route.</li>
+        </ul>
+        <h2>Third-party services</h2>
+        <ul>
+          <li>The base map is loaded from <a href="https://openfreemap.org">OpenFreeMap</a>, which receives your IP address and the map area you’re viewing, like any web server.</li>
+          <li>Postbox and shop data (© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors) is downloaded from the POSTAL website, hosted on GitHub Pages.</li>
+          <li>If you open a route in Google Maps or a postal operator’s website, that service’s privacy policy applies.</li>
+        </ul>
+        <h2>The recipient’s name</h2>
+        <p>The name you write on the envelope is only shown on screen: it is never stored or sent anywhere.</p>
+        <h2>Contact</h2>
+        <p>For any questions: <a href="https://github.com/franziskus16/postal/issues">github.com/franziskus16/postal/issues</a>.</p>
+      </section>
+    </main>
+    <script>
+      const langs = ['ca', 'es', 'pt', 'fr', 'it', 'en']
+      const wanted = [new URLSearchParams(location.search).get('lang'), ...(navigator.languages || [navigator.language])]
+        .map((l) => (l || '').toLowerCase().split('-')[0])
+        .map((l) => (l === 'gl' ? 'es' : l))
+      const show = (l) => {
+        document.documentElement.lang = l
+        document.querySelectorAll('section[lang]').forEach((s) => s.classList.toggle('on', s.lang === l))
+        document.querySelectorAll('nav button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.l === l)))
+      }
+      show(wanted.find((l) => langs.includes(l)) || 'en')
+      document.querySelectorAll('nav button').forEach((b) => b.addEventListener('click', () => show(b.dataset.l)))
+    </script>
+  </body>
+</html>

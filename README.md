@@ -34,20 +34,30 @@ public/data/           aquí va busties-es.geojson (generat)
 
 ## Apps natives (Capacitor)
 
+Necessites **Android Studio** (per a Android) i **Xcode** (per a iOS, només en Mac).
+
+**Primera vegada:**
+
 ```bash
+npm install
 npx cap add android
-npx cap add ios          # només en un Mac amb Xcode
-npm run cap:sync
-npx cap open android     # obre Android Studio
-npx cap open ios         # obre Xcode
+npx cap add ios
+npm run cap:sync        # compila la web, la copia a les apps i hi posa els permisos d'ubicació
+npm run native:assets   # genera totes les icones i pantalles d'inici a partir d'assets/
 ```
 
-Permisos d'ubicació que cal afegir després de `cap add`:
+**Cada cop que canviïs el codi:** `npm run cap:sync`, i després obre l'app:
 
-- **Android** (`android/app/src/main/AndroidManifest.xml`):
-  `ACCESS_COARSE_LOCATION` i `ACCESS_FINE_LOCATION`
-- **iOS** (`ios/App/App/Info.plist`):
-  `NSLocationWhenInUseUsageDescription` → «Per mostrar-te les bústies més properes.»
+```bash
+npx cap open android    # Android Studio → ▶ per provar-la al mòbil o a l'emulador
+npx cap open ios        # Xcode → tria el teu iPhone → ▶
+```
+
+- L'app baixa les dades de bústies de `https://francescgimenez.com/postal/data/`, així té les de cada setmana sense publicar versions noves. Si no hi ha connexió, fa servir les que porta dins.
+- `scripts/native-setup.mjs` afegeix els permisos d'ubicació (Android) i el text del permís (iOS), i crea les traduccions del text a `ios/App/App/<idioma>.lproj/`.
+  **Un sol cop a Xcode:** arrossega les carpetes `ca.lproj`, `es.lproj`, `pt.lproj`, `fr.lproj`, `it.lproj` i `en.lproj` de `App/App` al grup *App* (marca «Create folder references» i el target *App*). Sense això, el permís surt en anglès.
+- Icones i pantalla d'inici: `assets/` (segell riso amb la P). Si les canvies, torna a executar `npm run native:assets`.
+- Política de privacitat (la demanen les botigues): `https://francescgimenez.com/postal/privacy.html`.
 
 ## Publicar
 

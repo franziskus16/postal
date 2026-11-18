@@ -3,6 +3,7 @@ import { computed, nextTick, onMounted, onBeforeUnmount, ref, shallowRef } from 
 import * as maplibregl from 'maplibre-gl'
 import type { GeoJSONSource, Map as MLMap } from 'maplibre-gl'
 import { PostboxStore } from './lib/tiles'
+import Intro from './components/Intro.vue'
 import { COUNTRIES, detectCountry } from './lib/countries'
 import { getCurrentPosition, watchPosition, type Fix } from './lib/location'
 import { nearest, formatDistance, directionsUrl, distanceMeters, type PostboxFeature, type LngLat } from './lib/geo'
@@ -11,6 +12,29 @@ import { snapToRoute, pointAlong, bearing } from './lib/navigation'
 import { postalStyle } from './map/postalStyle'
 import { placeTitle, placeStatus, placeWeek, kindLabel, isShop } from './lib/placeText'
 import { t, lang, countryName, postmarkDate, applyDocumentLang } from './i18n'
+
+const PRIVACY_URL = 'https://francescgimenez.com/postal/privacy.html'
+
+// Pantalla d'introducció: la primera vegada (i quan es torna a obrir des de «Sobre POSTAL»)
+const INTRO_KEY = 'postal:intro-seen'
+const showIntro = ref(!(() => {
+  try {
+    return localStorage.getItem(INTRO_KEY)
+  } catch {
+    return null
+  }
+})())
+function enterApp() {
+  try {
+    localStorage.setItem(INTRO_KEY, '1')
+  } catch {
+    /* sense emmagatzematge: la tornarà a veure, no passa res */
+  }
+  const first = showIntro.value
+  showIntro.value = false
+  // la ubicació es demana després d'haver explicat per què
+  if (first && !lastKnown) locateOnStart()
+}
 import { addPostalIcons } from './map/icons'
 import { THEMES, applyThemeCss, type ThemeCode } from './map/themes'
 
@@ -164,7 +188,8 @@ onMounted(() => {
     loadVisibleTiles()
     followCountryInView()
   })
-  locateOnStart() // sense esperar: el mapa ja es veu mentre el GPS respon
+  // sense esperar: el mapa ja es veu mentre el GPS respon (si cal, després de la introducció)
+  if (!showIntro.value) locateOnStart()
 })
 
 /** Capes pròpies (bústies i ruta) amb els colors del tema actual. */
@@ -665,6 +690,7 @@ function arrowElement() {
 </script>
 
 <template>
+  <Intro v-if="showIntro" @enter="enterApp" />
   <div class="app" :class="{ navigating: phase === 'on' }">
     <div ref="mapEl" class="map" />
 
@@ -833,6 +859,11 @@ function arrowElement() {
               </button>
             </li>
           </ol>
+          <p class="links">
+            <button type="button" @click="showIntro = true">{{ t('about') }}</button>
+            ·
+            <a :href="`${PRIVACY_URL}?lang=${lang}`" target="_blank" rel="noopener">{{ t('privacy') }}</a>
+          </p>
         </template>
       </div>
     </section>
@@ -1004,6 +1035,22 @@ function arrowElement() {
 .meta small, .card-head small, .arrived small { font-family: var(--font-mono); font-size: 11px; color: var(--ink-soft); }
 .go { color: var(--accent); font-weight: 800; font-size: 18px; }
 
+.links {
+  margin: 14px 0 0;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-soft);
+}
+.links a, .links button {
+  color: var(--ink-soft);
+  font: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
 .sections { display: grid; grid-template-columns: 1fr 1fr; margin-bottom: 12px; border: 1.5px solid var(--ink); }
 .sections button {
   padding: 9px 10px;
