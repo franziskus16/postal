@@ -379,8 +379,9 @@ function setSection(s: Section) {
 
 function updateStatus() {
   const total = activeStore().total(country.value)
+  // el país es diu en text (el color del mapa ja canvia sol segons on mires)
   status.value = total
-    ? t(section.value === 'boxes' ? 'count' : 'countStamps', { n: total.toLocaleString(lang.value) })
+    ? `${t(section.value === 'boxes' ? 'count' : 'countStamps', { n: total.toLocaleString(lang.value) })} · ${countryName(country.value)}`
     : t('noData', { country: countryName(country.value) })
 }
 
@@ -425,11 +426,6 @@ function setCountry(code: ThemeCode, fly = false) {
     map.value?.flyTo({ center: COUNTRIES[code].center, zoom: COUNTRIES[code].zoom, padding: sheetPadding() })
   }
   updateStatus()
-}
-
-function nextCountry() {
-  const codes = Object.keys(COUNTRIES) as ThemeCode[]
-  setCountry(codes[(codes.indexOf(country.value) + 1) % codes.length], true)
 }
 
 onBeforeUnmount(() => {
@@ -698,9 +694,6 @@ function arrowElement() {
     <header v-if="phase !== 'on'" class="brand">
       <h1 class="wordmark">POSTAL</h1>
       <span class="status">{{ status }}</span>
-      <button class="country" :title="t('changeCountry', { country: countryName(country) })" @click="nextCountry">
-        {{ country.toUpperCase() }}
-      </button>
     </header>
 
     <header v-else-if="nextStep" class="instruction">
@@ -895,7 +888,13 @@ function arrowElement() {
   border: 1.5px solid var(--ink);
   box-shadow: 4px 4px 0 var(--primary), 4px 4px 0 1.5px var(--ink);
 }
-.brand { display: flex; align-items: baseline; gap: 14px; padding: 10px 16px 9px; }
+.brand {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  padding: 10px 16px 9px;
+  max-width: calc(100% - 76px); /* deixa lloc als botons de zoom */
+}
 .wordmark {
   margin: 0;
   font-family: var(--font-display);
@@ -908,6 +907,10 @@ function arrowElement() {
   text-shadow: 2px 1.5px 0 var(--primary);
 }
 .status {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
   font-family: var(--font-mono);
   font-size: 11px;
   text-transform: uppercase;
@@ -936,19 +939,6 @@ function arrowElement() {
 }
 .instr-text { font-family: var(--font-display); font-size: 16px; line-height: 1.25; }
 .instr-text strong { display: block; font-family: var(--font-mono); font-size: 22px; }
-
-.country {
-  align-self: center;
-  margin-left: 2px;
-  padding: 3px 7px;
-  border: 1.5px solid var(--ink);
-  background: var(--primary);
-  color: var(--on-primary);
-  font-family: var(--font-mono);
-  font-weight: 600;
-  font-size: 11px;
-  letter-spacing: .08em;
-}
 
 /* ── Full inferior ────────────────────────── */
 .sheet {
