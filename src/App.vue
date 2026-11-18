@@ -13,6 +13,10 @@ import { postalStyle } from './map/postalStyle'
 import { placeTitle, placeStatus, placeWeek, kindLabel, isShop } from './lib/placeText'
 import { t, lang, countryName, postmarkDate, applyDocumentLang } from './i18n'
 import { ABOUT } from './about'
+import { parseHours } from './lib/hours'
+import { departure, loadSent, saveSent, newId, type SentItem, type MailKind, type Dest } from './lib/sent'
+import { fmtWhen, fmtDay, sentStatusText, postmarkOf } from './lib/sentText'
+import { arrivalWindow } from './lib/sent'
 
 // Adreça pública de la web (la mateixa SITE_URL que fan servir les pàgines per ciutat)
 const SITE_URL = ((import.meta.env.VITE_SITE_URL as string | undefined) || ABOUT.site).replace(/\/+$/, '')
@@ -112,6 +116,15 @@ let arrowMarker: maplibregl.Marker | undefined
 
 // ── La carta que portes ─────────────────────────
 const recipient = ref('') // «A qui l'envies?» (opcional, surt escrit a mà al sobre)
+// Enviades: cartes i postals deixades a la bústia (només al dispositiu)
+const sent = ref<SentItem[]>(loadSent())
+const showSent = ref(false)
+const postKind = ref<MailKind>('letter')
+const postDest = ref<Dest>('national')
+const justPosted = ref<SentItem>()
+const now = ref(new Date()) // perquè els estats («en camí», «hauria d'arribar»…) es mantinguin al dia
+const nowTimer = window.setInterval(() => (now.value = new Date()), 60_000)
+onBeforeUnmount(() => clearInterval(nowTimer))
 const moving = ref(false) // fa gronxar la carta mentre camines
 let lastFix: { at: number; pos: LngLat } | undefined
 let stillTimer: number | undefined
@@ -647,6 +660,7 @@ function trackMovement(fix: LngLat) {
 
 function arrive() {
   phase.value = 'arrived'
+  justPosted.value = undefined
   clearTimers()
   drawRemaining([])
   moving.value = false
@@ -679,6 +693,71 @@ function stopNavigation() {
   lastFix = undefined
   map.value?.easeTo({ pitch: 0, bearing: 0, padding: { top: 0, bottom: 0, left: 0, right: 0 } })
 }
+
+// ── Enviades ─────────────────────────────────────
+/** País des d'on s'envia: el de la bústia. */
+const postCountry = computed(() => {
+  const f = selected.value
+  if (!f) return country.value
+  const [lng, lat] = f.geometry.coordinates
+  return detectCountry({ lng, lat }) ?? country.value
+})
+
+function confirmPost() {
+  const f = selected.value
+  if (!f) return
+  const [lng, lat] = f.geometry.coordinates
+  const at = new Date()
+  const item: SentItem = {
+    id: newId(),
+    kind: postKind.value,
+    to: recipient.value || undefined,
+    dest: postDest.value,
+    cc: postCountry.value,
+    postedAt: at.getTime(),
+    departAt: departure(parseHours(f.properties.collection_times), at)?.getTime(),
+    box: { id: f.properties.id, lng, lat },
+  }
+  sent.value = [item, ...sent.value]
+  saveSent(sent.value)
+  justPosted.value = item
+}
+
+/** Deixar-la a la bústia seleccionada sense haver fet la ruta. */
+function postHereNow() {
+  justPosted.value = undefined
+  moving.value = false
+  phase.value = 'arrived'
+}
+
+function finishPosting(openList = false) {
+  stopNavigation()
+  select()
+  justPosted.value = undefined
+  recipient.value = ''
+  if (openList) showSent.value = true
+}
+
+function pickSection(s: Section) {
+  showSent.value = false
+  setSection(s)
+}
+
+function toggleReceived(item: SentItem) {
+  sent.value = sent.value.map((i) => (i.id === item.id ? { ...i, receivedAt: i.receivedAt ? undefined : Date.now() } : i))
+  saveSent(sent.value)
+}
+
+function removeSent(item: SentItem) {
+  sent.value = sent.value.filter((i) => i.id !== item.id)
+  saveSent(sent.value)
+}
+
+function showSentOnMap(item: SentItem) {
+  map.value?.flyTo({ center: [item.box.lng, item.box.lat], zoom: 17, padding: sheetPadding() })
+}
+
+const kindName = (k: MailKind) => t(k === 'letter' ? 'kindLetter' : 'kindPostcard')
 
 async function keepScreenOn() {
   try {
@@ -774,12 +853,59 @@ function arrowElement() {
               <strong>{{ t('arrivedShop') }}</strong>
               <small>{{ t('arrivedShopSub') }}</small>
             </div>
+            <div v-else-if="justPosted">
+              <strong>{{ t(justPosted.kind === 'letter' ? 'postedLetter' : 'postedPostcard') }}</strong>
+              <small>{{ justPosted.to ? t('sentTo', { name: justPosted.to }) : t('inBox') }}</small>
+            </div>
             <div v-else>
-              <strong>{{ t('sent') }}</strong>
-              <small>{{ recipient ? t('sentTo', { name: recipient }) : t('inBox') }}</small>
+              <strong>{{ t('postedQ') }}</strong>
+              <small>{{ t('postedSub') }}</small>
             </div>
           </div>
-          <button class="primary" @click="stopNavigation(); select()">{{ t('done') }}</button>
+
+          <!-- Botiga: ja està -->
+          <button v-if="selectedIsShop" class="primary" @click="finishPosting()">{{ t('done') }}</button>
+
+          <!-- Confirmada: quan surt i quan arriba -->
+          <template v-else-if="justPosted">
+            <p class="posted-info">
+              <span>{{ justPosted.departAt ? t('leaves', { when: fmtWhen(new Date(justPosted.departAt), now) }) : t('leavesUnknown') }}</span>
+              <strong>
+                {{ t('arrives', { from: fmtDay(arrivalWindow(justPosted)[0]), to: fmtDay(arrivalWindow(justPosted)[1]) }) }}
+              </strong>
+              <small>{{ t('estimateNote', { post: COUNTRIES[justPosted.cc].post.name }) }}</small>
+            </p>
+            <button class="primary" @click="finishPosting(true)">
+              <span class="primary-stamp" aria-hidden="true">✉</span>{{ t('seeSent') }}
+            </button>
+            <button class="ghost wide" @click="finishPosting()">{{ t('done') }}</button>
+          </template>
+
+          <!-- Pregunta: l'has deixada? -->
+          <template v-else>
+            <div class="chips" role="radiogroup">
+              <button v-for="k in (['letter', 'postcard'] as const)" :key="k" role="radio" :aria-checked="postKind === k" :class="{ on: postKind === k }" @click="postKind = k">
+                {{ kindName(k) }}
+              </button>
+            </div>
+            <span class="chips-label">{{ t('destQ') }}</span>
+            <div class="chips" role="radiogroup" :aria-label="t('destQ')">
+              <button
+                v-for="d in (['national', 'europe', 'world'] as const)"
+                :key="d"
+                role="radio"
+                :aria-checked="postDest === d"
+                :class="{ on: postDest === d }"
+                @click="postDest = d"
+              >
+                {{ d === 'national' ? countryName(postCountry) : t(d === 'europe' ? 'destEurope' : 'destWorld') }}
+              </button>
+            </div>
+            <button class="primary" @click="confirmPost">
+              <span class="primary-stamp" aria-hidden="true">✓</span>{{ t('confirmPosted') }}
+            </button>
+            <button class="ghost wide" @click="finishPosting()">{{ t('notYet') }}</button>
+          </template>
         </template>
 
         <!-- Bústia o lloc seleccionat -->
@@ -817,6 +943,7 @@ function arrowElement() {
           <a class="gmaps" :href="directionsUrl(lngLatOf(selected), mode)" target="_blank" rel="noopener">
             {{ t('openGoogle') }}
           </a>
+          <button v-if="!selectedIsShop" type="button" class="gmaps" @click="postHereNow">{{ t('postHere') }} ✉</button>
           <a v-if="selectedIsShop" class="gmaps" :href="countryInfo.post.url" target="_blank" rel="noopener">
             {{ t('buyOnline', { post: countryInfo.post.name }) }}
           </a>
@@ -827,21 +954,57 @@ function arrowElement() {
           <div class="sections" role="tablist">
             <button
               role="tab"
-              :aria-selected="section === 'boxes'"
-              :class="{ on: section === 'boxes' }"
-              @click="setSection('boxes')"
+              :aria-selected="section === 'boxes' && !showSent"
+              :class="{ on: section === 'boxes' && !showSent }"
+              @click="pickSection('boxes')"
             >
               ✉ {{ t('sectionBoxes') }}
             </button>
             <button
               role="tab"
-              :aria-selected="section === 'stamps'"
-              :class="{ on: section === 'stamps' }"
-              @click="setSection('stamps')"
+              :aria-selected="section === 'stamps' && !showSent"
+              :class="{ on: section === 'stamps' && !showSent }"
+              @click="pickSection('stamps')"
             >
               € {{ t('sectionStamps') }}
             </button>
+            <button role="tab" :aria-selected="showSent" :class="{ on: showSent }" @click="showSent = true">
+              ➤ {{ t('sectionSent') }}<span v-if="sent.length" class="badge">{{ sent.length }}</span>
+            </button>
           </div>
+
+          <!-- Enviades -->
+          <template v-if="showSent">
+            <p v-if="!sent.length" class="sent-empty">{{ t('sentEmpty') }}</p>
+            <ol v-else class="list sent-list">
+              <li v-for="item in sent" :key="item.id" class="sent-item">
+                <button class="item" @click="showSentOnMap(item)">
+                  <span class="postmark" aria-hidden="true">
+                    <b>{{ postmarkOf(item).day }}</b>
+                    <i>{{ postmarkOf(item).time }}</i>
+                  </span>
+                  <span class="meta">
+                    <strong>{{ kindName(item.kind) }}{{ item.to ? ` · ${t('toName', { name: item.to })}` : '' }}</strong>
+                    <small
+                      :class="{
+                        good: sentStatusText(item, now).tone === 'good',
+                        bad: sentStatusText(item, now).tone === 'bad',
+                      }"
+                    >
+                      {{ sentStatusText(item, now).text }}
+                    </small>
+                  </span>
+                </button>
+                <div class="sent-actions">
+                  <button type="button" :class="{ on: item.receivedAt }" @click="toggleReceived(item)">
+                    {{ item.receivedAt ? t('undoReceived') : t('markReceived') }}
+                  </button>
+                  <button type="button" :aria-label="t('removeSent')" @click="removeSent(item)">{{ t('removeSent') }}</button>
+                </div>
+              </li>
+            </ol>
+          </template>
+          <template v-else>
           <button class="primary" :disabled="busy || !hasData" @click="locateMe">
             <span class="primary-stamp" aria-hidden="true">{{ section === 'boxes' ? '✉' : '€' }}</span>
             {{ busy ? t('searching') : section === 'boxes' ? t('findNearest') : t('findStamps') }}
@@ -867,6 +1030,7 @@ function arrowElement() {
               </button>
             </li>
           </ol>
+          </template>
           <p class="links">
             <button type="button" @click="showIntro = true">{{ t('about') }}</button>
             ·
@@ -1058,7 +1222,7 @@ function arrowElement() {
   text-decoration: underline;
   text-underline-offset: 2px;
 }
-.sections { display: grid; grid-template-columns: 1fr 1fr; margin-bottom: 12px; border: 1.5px solid var(--ink); }
+.sections { display: grid; grid-template-columns: 1fr 1fr 1fr; margin-bottom: 12px; border: 1.5px solid var(--ink); }
 .sections button {
   padding: 9px 10px;
   border: 0;
@@ -1118,6 +1282,42 @@ function arrowElement() {
   font-family: var(--font-mono); font-size: 12px; font-weight: 600;
   color: var(--ink); text-decoration: underline; text-underline-offset: 3px;
 }
+
+button.gmaps { width: 100%; background: none; border: 0; padding: 0; cursor: pointer; }
+
+/* ── Enviades ──────────────────────────────── */
+.badge {
+  display: inline-grid; place-items: center; min-width: 18px; height: 18px; margin-left: 6px; padding: 0 4px;
+  background: var(--primary); color: var(--on-primary); font-family: var(--font-mono); font-size: 10px; border-radius: 9px;
+}
+.chips { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; border: 1.5px solid var(--ink); margin: 0 0 12px; }
+.chips button {
+  padding: 9px 6px; border: 0; background: var(--paper); color: var(--ink);
+  font-family: var(--font-mono); font-weight: 600; font-size: 12px;
+}
+.chips button + button { border-left: 1.5px solid var(--ink); }
+.chips button.on { background: var(--ink); color: var(--paper); }
+.chips-label { display: block; margin-bottom: 6px; font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-soft); }
+.ghost.wide { width: 100%; margin-top: 10px; padding: 11px; }
+.posted-info { display: flex; flex-direction: column; gap: 4px; margin: 0 0 14px; font-family: var(--font-mono); font-size: 12px; color: var(--ink); }
+.posted-info strong { font-family: var(--font-display); font-size: 16px; }
+.posted-info small { color: var(--ink-soft); font-size: 10.5px; }
+.sent-empty { font-family: var(--font-mono); font-size: 12px; line-height: 1.6; color: var(--ink-soft); margin: 4px 0 0; }
+.sent-item .item { padding-bottom: 4px; }
+.postmark {
+  flex: none; display: grid; place-items: center; align-content: center;
+  width: 62px; height: 62px; border: 1.5px dashed var(--accent); border-radius: 50%;
+  color: var(--accent); font-family: var(--font-mono); line-height: 1.2; transform: rotate(-8deg);
+}
+.postmark b { font-size: 11px; }
+.postmark i { font-style: normal; font-size: 10px; }
+.sent-actions { display: flex; gap: 8px; justify-content: flex-end; padding: 0 0 10px; }
+.sent-actions button {
+  border: 1.5px solid var(--ink); background: var(--paper); color: var(--ink);
+  font-family: var(--font-mono); font-size: 11px; font-weight: 600; padding: 5px 9px;
+}
+.sent-actions button.on { background: var(--primary); color: var(--on-primary); }
+.sent-actions button + button { border-color: var(--ink-soft); color: var(--ink-soft); }
 
 /* ── La carta en primer pla ──────────────────── */
 .letter {
