@@ -12,8 +12,11 @@ import { snapToRoute, pointAlong, bearing } from './lib/navigation'
 import { postalStyle } from './map/postalStyle'
 import { placeTitle, placeStatus, placeWeek, kindLabel, isShop } from './lib/placeText'
 import { t, lang, countryName, postmarkDate, applyDocumentLang } from './i18n'
+import { ABOUT } from './about'
 
-const PRIVACY_URL = 'https://francescgimenez.com/postal/privacy.html'
+// Adreça pública de la web (la mateixa SITE_URL que fan servir les pàgines per ciutat)
+const SITE_URL = ((import.meta.env.VITE_SITE_URL as string | undefined) || ABOUT.site).replace(/\/+$/, '')
+const PRIVACY_URL = `${SITE_URL}/privacy.html`
 
 // Pantalla d'introducció: la primera vegada (i quan es torna a obrir des de «Sobre POSTAL»)
 const INTRO_KEY = 'postal:intro-seen'
@@ -48,6 +51,17 @@ const SIMULATE = simParam !== null
 const SIM_START: LngLat | undefined = (() => {
   const [lat, lng] = (simParam ?? '').split(',').map(Number)
   return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : undefined
+})()
+/**
+ * Enllaç directe a un punt del mapa (des de les pàgines de ciutat):
+ *   ?at=41.3870,2.1700&z=14  → obre el mapa aquí i no vola cap a la ubicació
+ */
+const AT: { pos: LngLat; zoom: number } | undefined = (() => {
+  const q = new URLSearchParams(location.search)
+  const [lat, lng] = (q.get('at') ?? '').split(',').map(Number)
+  if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) return undefined
+  const z = Number(q.get('z'))
+  return { pos: { lat, lng }, zoom: Number.isFinite(z) && z >= 3 && z <= 19 ? z : 14 }
 })()
 const SPEED: Record<TravelMode, number> = { foot: 1.4, bike: 4.5 } // m/s
 const REROUTE_AFTER_M = 35
@@ -120,7 +134,7 @@ const eta = computed(() => Math.max(1, Math.round(remaining.value / SPEED[mode.v
 // ── Mapa ─────────────────────────────────────────
 onMounted(() => {
   // Obrim on eres l'última vegada (si ho sabem); si no, el país sencer
-  const start = SIM_START ?? savedPosition()
+  const start = SIM_START ?? AT?.pos ?? savedPosition()
   country.value = (start && detectCountry(start)) || 'es'
   applyThemeCss(theme.value)
 
@@ -128,7 +142,7 @@ onMounted(() => {
     container: mapEl.value!,
     style: postalStyle(theme.value),
     center: start ? [start.lng, start.lat] : countryInfo.value.center,
-    zoom: start ? 15 : countryInfo.value.zoom,
+    zoom: AT && !SIM_START ? AT.zoom : start ? 15 : countryInfo.value.zoom,
     maxPitch: 75,
     attributionControl: { compact: true },
   })
@@ -498,6 +512,7 @@ function sheetPadding() {
 }
 
 async function locateOnStart() {
+  if (AT) return // ve d'un enllaç a una ciutat: ens quedem on ens han portat
   try {
     const pos = await myPosition()
     if (phase.value !== 'off' || selected.value) return // l'usuari ja ha començat a fer coses
@@ -856,6 +871,8 @@ function arrowElement() {
             <button type="button" @click="showIntro = true">{{ t('about') }}</button>
             ·
             <a :href="`${PRIVACY_URL}?lang=${lang}`" target="_blank" rel="noopener">{{ t('privacy') }}</a>
+            ·
+            <a :href="`${SITE_URL}/${lang}/`" target="_blank" rel="noopener">{{ t('byCity') }}</a>
           </p>
         </template>
       </div>

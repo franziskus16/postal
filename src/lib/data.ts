@@ -3,9 +3,13 @@
  *  - a la web: del mateix lloc (./data/)
  *  - a l'app mòbil: de la web publicada (VITE_DATA_BASE), perquè tingui les dades
  *    noves sense publicar una versió nova a les botigues. Si no hi ha connexió,
- *    fa servir les que porta dins l'app.
+ *    fa servir les que porta dins l'app. (`VITE_NATIVE=1` en compilar l'app ho activa.)
  */
-const REMOTE_BASE = import.meta.env.VITE_DATA_BASE as string | undefined
+import { ABOUT } from '../about'
+
+const SITE = ((import.meta.env.VITE_SITE_URL as string | undefined) || ABOUT.site).replace(/\/+$/, '')
+const REMOTE_BASE =
+  (import.meta.env.VITE_DATA_BASE as string | undefined) || (import.meta.env.VITE_NATIVE ? `${SITE}/data/` : undefined)
 const LOCAL_BASE = './data/'
 
 async function fetchJson<T>(url: string): Promise<T> {

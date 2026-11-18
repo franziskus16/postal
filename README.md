@@ -53,11 +53,23 @@ npx cap open android    # Android Studio → ▶ per provar-la al mòbil o a l'e
 npx cap open ios        # Xcode → tria el teu iPhone → ▶
 ```
 
-- L'app baixa les dades de bústies de `https://francescgimenez.com/postal/data/`, així té les de cada setmana sense publicar versions noves. Si no hi ha connexió, fa servir les que porta dins.
+- L'app baixa les dades de bústies de la web publicada (`<web>/data/`), així té les de cada setmana sense publicar versions noves. Si no hi ha connexió, fa servir les que porta dins.
 - `scripts/native-setup.mjs` afegeix els permisos d'ubicació (Android) i el text del permís (iOS), i crea les traduccions del text a `ios/App/App/<idioma>.lproj/`.
   **Un sol cop a Xcode:** arrossega les carpetes `ca.lproj`, `es.lproj`, `pt.lproj`, `fr.lproj`, `it.lproj` i `en.lproj` de `App/App` al grup *App* (marca «Create folder references» i el target *App*). Sense això, el permís surt en anglès.
 - Icones i pantalla d'inici: `assets/` (segell riso amb la P). Si les canvies, torna a executar `npm run native:assets`.
 - Política de privacitat (la demanen les botigues): `https://francescgimenez.com/postal/privacy.html`.
+
+## Cercadors (SEO)
+
+`npm run build` també genera, a partir de les dades reals, pàgines estàtiques per als cercadors (`scripts/seo/`):
+
+- `/{idioma}/` — portada en cada idioma (ca, es, pt, fr, it, en)
+- `/{idioma}/{busties|buzones|marcos-do-correio|boites-aux-lettres|cassette-postali|postboxes}/{ciutat}/` — una pàgina per ciutat amb el nombre de bústies, hores de recollida, on comprar segells, oficines, preguntes freqüents i un enllaç que obre el mapa a la ciutat (`?at=lat,lng&z=`)
+- `sitemap.xml`, `robots.txt`, la imatge per compartir (`public/og.png`) i les metaetiquetes de la portada
+
+Les ciutats són a `scripts/seo/cities.ts` (només es publiquen si tenen 10 bústies o més); els textos, a `scripts/seo/strings.ts`.
+
+**Canviar de domini:** canvia `site` a `src/about.ts` (o compila amb `SITE_URL=…`) i posa el domini a `public/CNAME`.
 
 ## Publicar
 
